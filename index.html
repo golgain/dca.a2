@@ -1,0 +1,3396 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>মিনসা ডিজিটাল প্রেসক্রিপশন স্টুডিও</title>
+  <meta name="theme-color" content="#0369a1">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Rx Pro">
+
+  <!-- Tailwind CSS & FontAwesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style id="dynPage">
+    @page {
+      size: portrait;
+      margin: 0mm !important;
+    }
+  </style>
+  <style>
+    * {
+      font-family: 'Hind Siliguri', 'Inter', sans-serif;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Screen Canvas & Responsive A4 Sheet Styling */
+    .a4-screen-wrapper {
+      width: 100%;
+      max-width: 210mm;
+      margin: 0 auto;
+      background: #ffffff;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    #prescriptionCanvas {
+      width: 100%;
+      min-height: 260mm;
+      padding: 5mm 9mm 5mm 9mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      background: #ffffff;
+    }
+
+    /* Mobile Responsive Layout: Scaled Sheet & Clean Flow */
+    @media screen and (max-width: 768px) {
+      body {
+        padding-bottom: 70px;
+      }
+      .main-app-container {
+        padding: 4px !important;
+      }
+      .a4-screen-wrapper {
+        border-radius: 6px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      }
+      #prescriptionCanvas {
+        padding: 8px 8px 6px 8px;
+        min-height: auto;
+      }
+      .rx-header-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 4px !important;
+      }
+      .rx-header-bn { width: 44% !important; }
+      .rx-header-logo { width: 12% !important; }
+      .rx-header-en { width: 44% !important; }
+
+      .patient-bar {
+        font-size: 10px !important;
+        padding: 4px 6px !important;
+      }
+
+      .prescription-body {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+      }
+      .rx-left-column {
+        width: 34% !important;
+        padding-right: 4px !important;
+      }
+      .rx-med-column {
+        width: 66% !important;
+      }
+      #medicineContainer {
+        grid-template-columns: 1fr !important;
+        gap: 3.5px !important;
+      }
+      .footer-contact-box {
+        flex-direction: column !important;
+        gap: 4px !important;
+        text-align: left !important;
+      }
+      .footer-contact-box > div {
+        width: 100% !important;
+        text-align: left !important;
+      }
+    }
+
+    /* Contenteditable Interactive Hover & Focus */
+    [contenteditable="true"] {
+      transition: background-color 0.15s ease, outline 0.15s ease;
+      border-radius: 2px;
+    }
+    [contenteditable="true"]:hover {
+      background-color: rgba(224, 242, 254, 0.5);
+      outline: 1px dashed #38bdf8;
+    }
+    [contenteditable="true"]:focus {
+      outline: 2px solid #0284c7;
+      background-color: #f0f9ff;
+    }
+
+    /* Placeholders */
+    [data-ph]:empty { display: inline-block; min-width: 24px; }
+    [data-ph]:empty::before { content: attr(data-ph); color: #94a3b8; font-style: italic; font-weight: 400; }
+
+    /* Medicine Numbering Counter */
+    .med-counter { counter-reset: med-idx; }
+    .med-row { counter-increment: med-idx; }
+    .med-number::before {
+      content: counter(med-idx) ". ";
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Autocomplete dropdown */
+    .autocomplete-items {
+      position: absolute;
+      border: 1px solid #cbd5e1;
+      border-top: none;
+      z-index: 9999;
+      background-color: #ffffff;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 12px 28px -4px rgba(0,0,0,0.18);
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .autocomplete-item {
+      padding: 7px 12px;
+      cursor: pointer;
+      font-size: 12px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .autocomplete-item:hover {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      font-weight: 600;
+    }
+
+    /* SPECIAL PRINT & PAD MODES */
+    body.mode-blank-pad .rx-normal-body { display: none !important; }
+    body.mode-blank-pad .rx-blank-body { display: flex !important; }
+
+    body.mode-preprinted-pad .header-section,
+    body.mode-preprinted-pad .footer-section,
+    body.mode-preprinted-pad .top-banner-bar {
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+
+    body.mode-lab-slip .rx-med-column,
+    body.mode-lab-slip .rx-advice-section {
+      display: none !important;
+    }
+    body.mode-lab-slip .rx-left-column {
+      width: 100% !important;
+      border-right: none !important;
+    }
+    body.mode-lab-slip .lab-slip-banner {
+      display: block !important;
+    }
+
+    /* =========================================================================
+       PRINT: 100% STRICT 1 SINGLE PAGE GUARANTEE (A4 & US LETTER SAFE)
+       ========================================================================= */
+    @media print {
+      @page {
+        size: portrait;
+        margin: 0mm !important;
+      }
+      html, body {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+      }
+      .no-print, header, nav, #appBottomNav, .modal-backdrop, #printPreviewModal,
+      #settingsModal, #doctorProfileModal, #sectionPresetModal, #medicinePickerModal,
+      #advicePickerModal, #autocompleteDropdown, #toolsDrawer,
+      #toast, .tab-pane:not(#viewEditor), .quick-add-plus-btn {
+        display: none !important;
+      }
+      #viewEditor {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      main {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+      }
+      .a4-screen-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+      }
+
+      /* Single-Page Anchored Frame: Header Top, Footer Bottom, ZERO Page 2 */
+      #prescriptionCanvas {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        min-height: 0 !important;
+        padding: 4mm 8mm 3mm 8mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        overflow: hidden !important;
+        background: #ffffff !important;
+      }
+
+      .top-banner-bar {
+        flex-shrink: 0 !important;
+        padding-bottom: 1px !important;
+      }
+      .header-section {
+        flex-shrink: 0 !important;
+      }
+      .patient-bar {
+        flex-shrink: 0 !important;
+      }
+
+      /* Hide radios in print, display clean text */
+      .sex-radio-group { display: none !important; }
+      .sex-print-text { display: inline !important; font-weight: bold !important; }
+
+      /* Body expands naturally to anchor footer at the very bottom */
+      .prescription-body {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+        margin-top: 3px !important;
+        margin-bottom: 3px !important;
+      }
+
+      .rx-left-column {
+        width: 30% !important;
+        overflow: hidden !important;
+      }
+      .rx-med-column {
+        width: 70% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        overflow: hidden !important;
+      }
+
+      #medicineContainer {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 2.5px 10px !important;
+      }
+
+      .footer-section {
+        flex-shrink: 0 !important;
+        margin-top: auto !important;
+        padding-top: 2px !important;
+      }
+
+      [contenteditable] { outline: none !important; background: none !important; }
+      [data-ph]:empty::before { content: none !important; }
+      .med-row button, .group button { display: none !important; }
+
+      body.mode-preprinted-pad .header-section,
+      body.mode-preprinted-pad .footer-section,
+      body.mode-preprinted-pad .top-banner-bar {
+        visibility: hidden !important;
+      }
+
+      body.mode-blank-pad .rx-normal-body { display: none !important; }
+      body.mode-blank-pad .rx-blank-body { display: flex !important; }
+
+      /* Thermal 80mm Mode */
+      html.thermal-mode, html.thermal-mode body { width: 80mm !important; height: auto !important; overflow: visible !important; }
+      html.thermal-mode .a4-screen-wrapper { width: 80mm !important; height: auto !important; overflow: visible !important; }
+      html.thermal-mode #prescriptionCanvas { position: static !important; zoom: 1 !important; width: 80mm !important; height: auto !important; padding: 3mm !important; overflow: visible !important; }
+      html.thermal-mode .prescription-body { flex-direction: column !important; }
+      html.thermal-mode .prescription-body > div { width: 100% !important; border-right: 0 !important; border-bottom: 1px dashed #94a3b8; padding: 0 0 6px !important; margin-bottom: 6px; }
+      html.thermal-mode #medicineContainer { grid-template-columns: 1fr !important; }
+    }
+  </style>
+<style>
+.top-banner-bar[data-decor="ornament"] #topSpecialNote:not(:empty)::before{content:"❖ "}
+.top-banner-bar[data-decor="ornament"] #topSpecialNote:not(:empty)::after{content:" ❖"}
+.top-banner-bar[data-decor="stars"] #topSpecialNote:not(:empty)::before{content:"✦ "}
+.top-banner-bar[data-decor="stars"] #topSpecialNote:not(:empty)::after{content:" ✦"}
+.top-banner-bar[data-decor="box"]{border:1px solid #94a3b8;border-radius:6px;padding:2px 6px}
+.top-banner-bar[data-decor="double"]{border-bottom:3px double #94a3b8}
+</style></head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+  <!-- TOP APP HEADER (100% RESPONSIVE) -->
+  <header class="no-print bg-sky-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-6xl mx-auto px-2 md:px-4 py-2 flex items-center justify-between gap-2 flex-wrap md:flex-nowrap">
+      
+      <!-- Left: Logo & Multi-Chamber Selector -->
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="bg-white text-sky-900 font-black px-2 py-0.5 rounded text-sm shadow shrink-0">℞</span>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <h1 class="font-bold text-xs md:text-sm leading-tight truncate">মিনসা চেম্বার Rx</h1>
+            <select id="activeChamberSelect" onchange="switchActiveChamber(this.value)" class="bg-sky-800 text-sky-100 text-[11px] px-1.5 py-0.5 rounded border border-sky-700 focus:outline-none cursor-pointer max-w-[130px] md:max-w-[180px] truncate" title="চেম্বার পরিবর্তন">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <p class="text-[9.5px] text-sky-200 truncate" id="txtAutoSaveStatus"><i class="fa-solid fa-circle-check text-emerald-400"></i> রেডি • ১ পেজ লকড</p>
+        </div>
+      </div>
+
+      <!-- Right: Action Buttons Group (With Direct Touch-Safe Pad Mode Selector!) -->
+      <div class="flex items-center gap-1.5 text-xs overflow-x-auto py-0.5 max-w-full">
+        <!-- New Patient -->
+        <button onclick="newPatientPrompt()" class="bg-white/15 hover:bg-white/25 text-white font-semibold px-2 py-1.5 rounded flex items-center gap-1 whitespace-nowrap shrink-0" title="নতুন রোগী">
+          <i class="fa-solid fa-user-plus text-xs"></i> <span class="hidden sm:inline">নতুন রোগী</span>
+        </button>
+
+        <!-- Doctor Profile 20 Fields Modal (10 Bangla + 10 English) -->
+        <button onclick="openDoctorProfileModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-2 py-1.5 rounded shadow-sm flex items-center gap-1 whitespace-nowrap shrink-0" title="ডাক্তার প্রফাইল ও ২০টি হেডার ফিল্ড">
+          <i class="fa-solid fa-user-doctor text-xs"></i> <span class="hidden md:inline">ডাঃ প্রফাইল</span>
+        </button>
+
+        <!-- Touch-Safe Pad Mode Select (100% Reliable on all Mobile Phones!) -->
+        <div class="relative inline-block shrink-0">
+          <select id="selPadMode" onchange="setPrintPadMode(this.value)" class="bg-teal-700 hover:bg-teal-600 text-white font-semibold px-2 py-1.5 rounded shadow-sm text-xs border border-teal-500 focus:outline-none cursor-pointer">
+            <option value="normal">📄 স্বাভাবিক মোড</option>
+            <option value="preprinted">📑 প্রি-প্রিন্টেড প্যাড মোড</option>
+            <option value="blank">📝 ব্ল্যাঙ্ক প্যাড মোড</option>
+            <option value="labslip">🔬 ল্যাব টেস্ট স্লিপ মোড</option>
+          </select>
+        </div>
+
+        <!-- WhatsApp -->
+        <button onclick="sendPrescriptionWhatsApp()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-2 py-1.5 rounded shadow-sm flex items-center gap-1 shrink-0" title="হোয়াটসঅ্যাপে পাঠান">
+          <i class="fa-brands fa-whatsapp text-sm"></i>
+        </button>
+
+        <!-- Tools Drawer -->
+        <button onclick="openToolsDrawer()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-2 py-1.5 rounded shadow-sm flex items-center gap-1 whitespace-nowrap shrink-0" title="ডোজ চিপস ও টুলস">
+          <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> <span class="hidden md:inline">টুলস</span>
+        </button>
+
+        <!-- Print Preview & Action -->
+        <button onclick="openPrintPreviewModal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold px-3 py-1.5 rounded shadow flex items-center gap-1.5 whitespace-nowrap shrink-0">
+          <i class="fa-solid fa-print"></i> <span>প্রিন্ট ও প্রিভিউ</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="max-w-6xl mx-auto p-1.5 md:p-3 main-app-container">
+    
+    <!-- TAB 1: PRESCRIPTION CANVAS -->
+    <div id="viewEditor" class="tab-pane active">
+      <div class="a4-screen-wrapper">
+        <div id="prescriptionCanvas">
+          
+          <!-- ITEM 1: TOP LIGHT-COLORED SPECIAL NOTE / BANNER (EDITABLE & DELETABLE) -->
+          <div class="top-banner-bar text-center text-slate-400 hover:text-slate-600 text-[10px] pb-1 border-b border-dashed border-slate-200 flex items-center justify-between">
+            <span class="w-4"></span>
+            <span contenteditable="true" id="topSpecialNote" data-ph="বিসমিল্লাহির রাহমানির রাহিম / জরুরি বার্তা / শুভেচ্ছা লিখুন..." onblur="saveAutoSnapshot()" class="font-medium text-slate-500 tracking-wide outline-none px-2 py-0.5">বিসমিল্লাহির রাহমানির রাহিম</span>
+            <button onclick="clearTopNote()" class="no-print text-slate-300 hover:text-rose-500 text-[9px] p-0.5" title="মুছে ফেলুন"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+
+          <!-- BANNER FOR LAB SLIP MODE -->
+          <div class="lab-slip-banner hidden bg-sky-900 text-white text-center py-1 font-bold text-xs uppercase tracking-wider mb-1.5 rounded">
+            LABORATORY INVESTIGATION & TEST REQUISITION SLIP
+          </div>
+
+          <!-- 1. HEADER: DOCTOR INFO (10 BANGLA + 10 ENGLISH CUSTOMIZABLE FIELDS) & LOGO -->
+          <div class="header-section border-b-2 border-slate-700 pb-1.5 pt-1">
+            <div class="rx-header-row flex justify-between items-start gap-2">
+              
+              <!-- Bangla Side (10 Customizable Lines: bnLine1 to bnLine10) -->
+              <div class="rx-header-bn w-[44%] text-left space-y-0.5" id="headerBnDocBox">
+                <!-- Dynamically populated or editable -->
+              </div>
+
+              <!-- Center Logo Emblem -->
+              <div class="rx-header-logo w-[12%] flex flex-col items-center justify-center pt-0.5">
+                <div class="relative group cursor-pointer" onclick="triggerLogoUpload()">
+                  <div id="logoContainer" class="w-10 h-10 md:w-12 md:h-12 rounded bg-sky-600 text-white flex items-center justify-center text-lg md:text-xl font-black shadow border border-sky-700 overflow-hidden">
+                    <i class="fa-solid fa-plus"></i>
+                  </div>
+                  <div class="no-print absolute inset-0 bg-black/60 text-white text-[7.5px] rounded opacity-0 group-hover:opacity-100 flex items-center justify-center text-center p-0.5">
+                    লোগো
+                  </div>
+                </div>
+                <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="handleLogoChange(event)">
+              </div>
+
+              <!-- English Side (10 Customizable Lines: enLine1 to enLine10) -->
+              <div class="rx-header-en w-[44%] text-right space-y-0.5" id="headerEnDocBox">
+                <!-- Dynamically populated or editable -->
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 2. PATIENT DEMOGRAPHICS BAR (ITEM 2: SEX RADIO BUTTONS MALE, FEMALE, OTHER) -->
+          <div class="patient-bar bg-slate-50 border-b border-slate-300 py-1 px-2 mt-1 text-[10.5px] text-slate-800 flex items-center justify-between gap-1 flex-wrap">
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">Name:</span>
+              <span contenteditable="true" id="patientName" onblur="saveAutoSnapshot()" data-ph="রোগীর নাম" class="border-b border-dotted border-slate-400 font-bold px-1 min-w-[95px] focus:outline-none">মোহাম্মদ রহিম</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">Age:</span>
+              <span contenteditable="true" id="patientAge" onblur="saveAutoSnapshot()" data-ph="বয়স" class="border-b border-dotted border-slate-400 font-semibold px-1 min-w-[26px] text-center focus:outline-none">৪৫Y</span>
+            </div>
+            
+            <!-- SEX RADIO BUTTONS: Male, Female, Other -->
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">Sex:</span>
+              <div class="sex-radio-group inline-flex items-center gap-1 text-[10px]">
+                <label class="inline-flex items-center gap-0.5 cursor-pointer font-medium">
+                  <input type="radio" name="patientSexRadio" id="sexRadioM" value="Male" checked onchange="updateSexRadio('Male')" class="cursor-pointer text-sky-600 focus:ring-0"> <span>Male</span>
+                </label>
+                <label class="inline-flex items-center gap-0.5 cursor-pointer font-medium">
+                  <input type="radio" name="patientSexRadio" id="sexRadioF" value="Female" onchange="updateSexRadio('Female')" class="cursor-pointer text-rose-600 focus:ring-0"> <span>Female</span>
+                </label>
+                <label class="inline-flex items-center gap-0.5 cursor-pointer font-medium">
+                  <input type="radio" name="patientSexRadio" id="sexRadioO" value="Other" onchange="updateSexRadio('Other')" class="cursor-pointer text-slate-600 focus:ring-0"> <span>Other</span>
+                </label>
+              </div>
+              <span class="sex-print-text hidden font-bold" id="patientSexPrint">Male</span>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">Phone:</span>
+              <span contenteditable="true" id="patientPhone" onblur="saveAutoSnapshot()" data-ph="01XXXXXXXXX" class="border-b border-dotted border-slate-400 font-mono px-1 min-w-[80px] focus:outline-none">01711000000</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">ID:</span>
+              <span contenteditable="true" id="patientId" onblur="saveAutoSnapshot()" data-ph="আইডি" class="border-b border-dotted border-slate-400 font-mono font-semibold px-1 min-w-[36px] text-center focus:outline-none">1001</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">Date:</span>
+              <span contenteditable="true" id="rxDate" onblur="saveAutoSnapshot()" class="border-b border-dotted border-slate-400 font-semibold px-1 min-w-[65px] text-center focus:outline-none">২৪/১০/২০২৬</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <span class="font-bold text-slate-700">Address:</span>
+              <span contenteditable="true" id="patientAddress" onblur="saveAutoSnapshot()" data-ph="ঠিকানা" class="border-b border-dotted border-slate-400 font-semibold px-1 min-w-[50px] focus:outline-none">রংপুর</span>
+            </div>
+          </div>
+
+          <!-- 3. NORMAL RX BODY -->
+          <div class="rx-normal-body prescription-body flex-1 flex gap-2 md:gap-3 mt-1.5">
+            
+            <!-- LEFT COLUMN (30% WIDTH) -->
+            <div class="rx-left-column w-[30%] border-r border-slate-300 pr-1.5 md:pr-2 flex flex-col gap-1 text-[9.5px] md:text-[10px]">
+              
+              <!-- Clinical Vitals (With Quick (+) Preset Popups for each vital!) -->
+              <div class="bg-sky-50/70 p-1.5 rounded border border-sky-100">
+                <div class="flex justify-between items-center mb-0.5">
+                  <h5 class="text-[9px] font-bold text-sky-900 uppercase tracking-wider">CLINICAL VITALS</h5>
+                  <button onclick="recalculateBMI()" class="no-print text-sky-600 hover:text-sky-800 text-[8px] font-semibold">BMI হিসেব</button>
+                </div>
+                <div class="grid grid-cols-2 gap-x-1 gap-y-0.5 text-slate-700 text-[9.5px]">
+                  
+                  <!-- BP -->
+                  <div class="flex items-center justify-between">
+                    <div><span class="font-semibold">BP:</span> <span contenteditable="true" id="vitalBP" data-ph="—" onblur="saveAutoSnapshot()" class="font-bold">130/85</span></div>
+                    <button onclick="openSectionPresetModal('vital_bp', 'vitalBP', 'রক্তচাপ (BP) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="BP টেমপ্লেট">+</button>
+                  </div>
+
+                  <!-- Pulse -->
+                  <div class="flex items-center justify-between">
+                    <div><span class="font-semibold">Pulse:</span> <span contenteditable="true" id="vitalPulse" data-ph="—" onblur="saveAutoSnapshot()" class="font-bold">78/m</span></div>
+                    <button onclick="openSectionPresetModal('vital_pulse', 'vitalPulse', 'নাড়ির স্পন্দন (Pulse) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="Pulse টেমপ্লেট">+</button>
+                  </div>
+
+                  <!-- Weight -->
+                  <div class="flex items-center justify-between">
+                    <div><span class="font-semibold">Weight:</span> <span contenteditable="true" id="vitalWeight" data-ph="—" oninput="calculateBMI()" onblur="saveAutoSnapshot()" class="font-bold">68 kg</span></div>
+                    <button onclick="openSectionPresetModal('vital_weight', 'vitalWeight', 'ওজন (Weight) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="Weight টেমপ্লেট">+</button>
+                  </div>
+
+                  <!-- Height -->
+                  <div class="flex items-center justify-between">
+                    <div><span class="font-semibold">Height:</span> <span contenteditable="true" id="vitalHeight" data-ph="—" oninput="calculateBMI()" onblur="saveAutoSnapshot()" class="font-bold">5'6"</span></div>
+                    <button onclick="openSectionPresetModal('vital_height', 'vitalHeight', 'উচ্চতা (Height) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="Height টেমপ্লেট">+</button>
+                  </div>
+
+                  <!-- BMI -->
+                  <div class="col-span-2"><span class="font-semibold">BMI:</span> <span id="vitalBMI" class="font-bold text-sky-800">24.2 (Normal)</span></div>
+
+                  <!-- SpO2 -->
+                  <div class="flex items-center justify-between">
+                    <div><span class="font-semibold">SpO2:</span> <span contenteditable="true" id="vitalSpO2" data-ph="—" onblur="saveAutoSnapshot()" class="font-bold">98%</span></div>
+                    <button onclick="openSectionPresetModal('vital_spo2', 'vitalSpO2', 'অক্সিজেন (SpO2) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="SpO2 টেমপ্লেট">+</button>
+                  </div>
+
+                  <!-- Temp -->
+                  <div class="flex items-center justify-between">
+                    <div><span class="font-semibold">Temp:</span> <span contenteditable="true" id="vitalTemp" data-ph="—" onblur="saveAutoSnapshot()" class="font-bold">98.4°F</span></div>
+                    <button onclick="openSectionPresetModal('vital_temp', 'vitalTemp', 'তাপমাত্রা (Temp) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="Temp টেমপ্লেট">+</button>
+                  </div>
+
+                  <!-- RBS -->
+                  <div class="col-span-2 flex items-center justify-between border-t border-sky-100 pt-0.5 mt-0.5">
+                    <div><span class="font-semibold">RBS / Sugar:</span> <span contenteditable="true" id="vitalRBS" data-ph="—" onblur="saveAutoSnapshot()" class="font-bold">7.2</span></div>
+                    <button onclick="openSectionPresetModal('vital_rbs', 'vitalRBS', 'রক্তের সুগার (RBS) টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="RBS টেমপ্লেট">+</button>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Chief Complaints (Item 3: (+) popup & no junk demo text) -->
+              <div>
+                <div class="flex justify-between items-center mb-0.5">
+                  <h5 class="font-bold text-sky-900 uppercase tracking-wide text-[9px]">CHIEF COMPLAINTS:</h5>
+                  <div class="no-print flex items-center gap-1">
+                    <button onclick="openSectionPresetModal('complaints', 'complaintsList', 'প্রধান লক্ষণ (Complaints) টেমপ্লেট')" class="text-indigo-600 hover:text-indigo-800 text-[9px] font-bold" title="টেমপ্লেট পপ-আপ"><i class="fa-solid fa-folder-plus"></i></button>
+                    <button onclick="addCleanListItem('complaintsList')" class="text-sky-600 hover:text-sky-800 text-[8.5px] font-bold">+ যোগ</button>
+                  </div>
+                </div>
+                <ul id="complaintsList" class="list-disc pl-3 space-y-0.5 text-slate-800">
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'complaints')" onblur="saveAutoSnapshot()">Chest pain on exertion (2 months)</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'complaints')" onblur="saveAutoSnapshot()">Shortness of breath on walking</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Past History -->
+              <div>
+                <div class="flex justify-between items-center mb-0.5">
+                  <h5 class="font-bold text-sky-900 uppercase tracking-wide text-[9px]">PAST HISTORY:</h5>
+                  <div class="no-print flex items-center gap-1">
+                    <button onclick="openSectionPresetModal('history', 'historyList', 'পূর্ববর্তী রোগ ইতিহাস (History) টেমপ্লেট')" class="text-indigo-600 hover:text-indigo-800 text-[9px] font-bold" title="টেমপ্লেট পপ-আপ"><i class="fa-solid fa-folder-plus"></i></button>
+                    <button onclick="addCleanListItem('historyList')" class="text-sky-600 hover:text-sky-800 text-[8.5px] font-bold">+ যোগ</button>
+                  </div>
+                </div>
+                <ul id="historyList" class="list-disc pl-3 space-y-0.5 text-slate-800">
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'history')" onblur="saveAutoSnapshot()">Hypertension for 5 years</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'history')" onblur="saveAutoSnapshot()">Non-diabetic</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Diagnosis -->
+              <div>
+                <div class="flex justify-between items-center mb-0.5">
+                  <h5 class="font-bold text-sky-900 uppercase tracking-wide text-[9px]">DIAGNOSIS:</h5>
+                  <div class="no-print flex items-center gap-1">
+                    <button onclick="openSectionPresetModal('diagnosis', 'diagnosisList', 'রোগ নির্ণয় (Diagnosis) টেমপ্লেট')" class="text-indigo-600 hover:text-indigo-800 text-[9px] font-bold" title="টেমপ্লেট পপ-আপ"><i class="fa-solid fa-folder-plus"></i></button>
+                    <button onclick="addCleanListItem('diagnosisList')" class="text-sky-600 hover:text-sky-800 text-[8.5px] font-bold">+ যোগ</button>
+                  </div>
+                </div>
+                <ul id="diagnosisList" class="list-disc pl-3 space-y-0.5 text-rose-900 font-semibold">
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'diagnosis')" onblur="saveAutoSnapshot()">Stable Angina Pectoris</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'diagnosis')" onblur="saveAutoSnapshot()">Primary Hypertension</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Investigations (TESTS) -->
+              <div class="bg-amber-50/60 p-1.5 rounded border border-amber-200">
+                <div class="flex justify-between items-center mb-0.5">
+                  <h5 class="font-bold text-sky-950 uppercase tracking-wide text-[9px]">
+                    <i class="fa-solid fa-vial-virus text-amber-600 mr-1"></i>INVESTIGATIONS (পরীক্ষা):
+                  </h5>
+                  <div class="no-print flex items-center gap-1">
+                    <button onclick="openSectionPresetModal('investigations', 'investigationList', 'টেস্ট / পরীক্ষা (Investigations) টেমপ্লেট')" class="text-indigo-600 hover:text-indigo-800 text-[9px] font-bold" title="টেমপ্লেট পপ-আপ"><i class="fa-solid fa-folder-plus"></i></button>
+                    <button onclick="addCleanListItem('investigationList')" class="text-sky-600 hover:text-sky-800 text-[8.5px] font-bold">+ যোগ</button>
+                  </div>
+                </div>
+                <ul id="investigationList" class="list-disc pl-3 space-y-0.5 text-slate-900 font-medium">
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'investigations')" onblur="saveAutoSnapshot()">ECG (12 Leads)</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'investigations')" onblur="saveAutoSnapshot()">Echo 2D with Color Doppler</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                  <li class="group">
+                    <span contenteditable="true" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'investigations')" onblur="saveAutoSnapshot()">Serum Lipid Profile</span>
+                    <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- REFERRED TO -->
+              <div class="bg-slate-50 p-1 rounded border border-slate-200">
+                <div class="flex justify-between items-center mb-0.5">
+                  <h6 class="font-bold text-slate-800 text-[8.5px]"><i class="fa-solid fa-user-doctor mr-1 text-sky-700"></i>REFERRED TO / রেফার্ড:</h6>
+                  <button onclick="openSectionPresetModal('referred', 'refTargetText', 'রেফার্ড প্রতিষ্ঠান টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="টেমপ্লেট">+</button>
+                </div>
+                <p contenteditable="true" id="refTargetText" data-ph="রেফার্ড প্রতিষ্ঠান লিখুন" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()" class="text-slate-800 font-semibold mt-0.5">কার্ডিওলজি ক্যাথল্যাব / এনজিওগ্রাম প্রয়োজনার্থে</p>
+              </div>
+
+              <!-- SPECIAL NOTES -->
+              <div class="bg-slate-50 p-1 rounded border border-slate-200">
+                <div class="flex justify-between items-center mb-0.5">
+                  <h6 class="font-bold text-slate-700 text-[8.5px]"><i class="fa-solid fa-note-sticky mr-1 text-amber-600"></i>SPECIAL NOTES:</h6>
+                  <button onclick="openSectionPresetModal('notes', 'notesTargetText', 'বিশেষ মন্তব্য টেমপ্লেট')" class="no-print quick-add-plus-btn text-sky-600 hover:text-sky-800 text-[9px] px-0.5" title="টেমপ্লেট">+</button>
+                </div>
+                <p contenteditable="true" id="notesTargetText" data-ph="জরুরি মন্তব্য লিখুন" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()" class="text-slate-600 italic mt-0.5">জরুরি প্রয়োজনে দ্রুত নিকটস্থ কার্ডিয়াক সেন্টারে যোগাযোগ করবেন।</p>
+              </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN (70% WIDTH): ℞ MEDICINES & ADVICE -->
+            <div class="rx-med-column w-[70%] flex flex-col justify-between">
+              <div>
+                <!-- Rx Header (ITEM 4 & 5: Clean add & Medicine Picker modal button) -->
+                <div class="flex items-center justify-between border-b border-sky-800 pb-0.5 mb-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xl font-black text-sky-900 font-serif leading-none">℞</span>
+                    <span class="text-[9.5px] text-slate-500 font-medium" id="medCapacityLabel">১২/১৬ টি ওষুধ</span>
+                  </div>
+                  <div class="no-print flex items-center gap-1.5 flex-wrap">
+                    <!-- Clean Add (No Junk Demo Text!) -->
+                    <button onclick="addNewMedicineClean()" class="bg-sky-100 hover:bg-sky-200 text-sky-900 px-2 py-0.5 rounded text-[10.5px] font-bold" title="ফাঁকা ঘর যোগ করুন">
+                      <i class="fa-solid fa-plus-circle"></i> + ঔষধ যোগ
+                    </button>
+                    <!-- Item 5: Select from Library Popup -->
+                    <button onclick="openMedicinePickerModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded text-[10.5px] font-bold shadow-sm" title="সংরক্ষিত লাইব্রেরি থেকে এক ক্লিকে বসান">
+                      <i class="fa-solid fa-list-check"></i> + লাইব্রেরি ঔষধ বাছাই
+                    </button>
+                  </div>
+                </div>
+
+                <!-- MEDICINES CONTAINER (DYNAMIC GRID) -->
+                <div id="medicineContainer" class="med-counter grid grid-cols-2 gap-x-2.5 gap-y-1 text-[9.5px] md:text-[10px]">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- ADVICE / পরামর্শ (ITEM 6: Advice Library Selector & Clean Add) -->
+              <div class="rx-advice-section border-t border-slate-300 pt-1 mt-1">
+                <div class="flex justify-between items-center mb-0.5">
+                  <h5 class="text-[10.5px] font-bold text-slate-800">Advice / পরামর্শ:</h5>
+                  <div class="no-print flex items-center gap-1.5">
+                    <button onclick="openAdvicePickerModal()" class="bg-teal-700 hover:bg-teal-800 text-white px-2 py-0.5 rounded text-[9px] font-bold shadow-sm" title="সংরক্ষিত পরামর্শের তালিকা থেকে বাছাই">
+                      <i class="fa-solid fa-square-check"></i> + পরামর্শ লাইব্রেরি
+                    </button>
+                    <button onclick="addCleanAdviceItem()" class="text-sky-600 hover:text-sky-800 text-[8.5px] font-bold">+ পরামর্শ যোগ</button>
+                  </div>
+                </div>
+                <ul id="adviceList" class="list-disc pl-3.5 text-[9.5px] md:text-[10px] text-slate-700 space-y-0.5">
+                  <!-- Rendered dynamically -->
+                </ul>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- 4. BLANK RX BODY (FOR HANDWRITTEN PAD OR MEDICAL CERTIFICATES) -->
+          <div class="rx-blank-body hidden flex-1 flex flex-col justify-between border border-dashed border-slate-300 rounded-lg p-4 my-2 min-h-[145mm]">
+            <div contenteditable="true" onfocus="setActiveTarget(this)" class="w-full h-full text-slate-800 text-sm leading-relaxed focus:outline-none" style="min-height: 130mm;">
+              <p class="text-slate-400 italic mb-4 no-print text-xs">
+                [ব্ল্যাঙ্ক প্যাড মোড: আপনি এই অংশে যেকোনো মেডিকেল সার্টিফিকেট, ফিটনেস সনদ বা চিঠি লিখতে পারেন। অথবা সম্পূর্ণ ফাঁকা রেখে প্রিন্ট করে হাতে লিখে প্রেসক্রিপশন দিতে পারেন।]
+              </p>
+              <h3 class="font-bold text-center text-base underline mb-3">MEDICAL CERTIFICATE / চিকিৎসকের প্রত্যয়ন পত্র</h3>
+              <p>This is to certify that <strong class="bind-name font-bold">মোহাম্মদ রহিম</strong>, aged <strong class="bind-age font-bold">৪৫Y</strong>, has been examined by me. He/She is advised complete bed rest for ............... days from ............... to ............... due to medical grounds.</p>
+            </div>
+          </div>
+
+          <!-- 5. FOOTER: ACTIVE CHAMBER DETAILS, SIGNATURE & QR CODE -->
+          <div class="footer-section border-t border-slate-300 pt-1 mt-1 text-[9px] md:text-[9.5px] text-slate-600">
+            
+            <!-- Signature Row & Digital QR Code -->
+            <div class="flex justify-between items-end mb-1">
+              <!-- Left: Rx ID & Dynamic QR Code -->
+              <div class="flex items-center gap-2">
+                <div id="prescriptionQrBox" class="w-9 h-9 border border-slate-300 rounded bg-white p-0.5 flex items-center justify-center">
+                  <!-- Offline SVG QR Generated Here -->
+                </div>
+                <div class="text-[8px] md:text-[8.5px] leading-tight">
+                  <span class="font-bold text-sky-950 block">Rx No: <span id="rxCode" class="font-mono">RX-1001-A</span></span>
+                  <span class="text-[7.5px] text-slate-400 block">ডিজিটাল রেফারেন্স কোড</span>
+                </div>
+              </div>
+
+              <!-- Right: Signature Box -->
+              <div class="text-right">
+                <div class="relative inline-block text-center cursor-pointer" onclick="triggerSigUpload()">
+                  <div id="sigContainer" class="h-6 md:h-7 w-28 md:w-32 flex items-end justify-center border-b border-slate-400">
+                    <span class="font-serif italic text-sm md:text-base font-bold text-sky-950">${esc(((appDb.doctorLines || {}).en || {}).line2 || "")}</span>
+                  </div>
+                  <input type="file" id="sigInput" accept="image/*" class="hidden" onchange="handleSigChange(event)">
+                </div>
+                <p contenteditable="true" id="txtDoctorSignLabel" class="text-[8px] md:text-[8.5px] font-bold text-slate-700 mt-0.5">চিকিৎসকের স্বাক্ষর</p>
+              </div>
+            </div>
+
+            <!-- Active Chamber Contact Box (Responsive Flex) -->
+            <div id="activeChamberDisplayBox" class="bg-slate-50 p-1 rounded border border-slate-200 text-[8.5px] md:text-[9px] leading-tight">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- System copyright notice -->
+            <div class="flex justify-between items-center text-[7.5px] text-slate-400 mt-0.5">
+              <span>* জরুরি প্রয়োজনে উল্লেখিত হটলাইনে যোগাযোগ করুন।</span>
+              <span>Rx Pro Chamber Edition</span>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: STORAGE & PATIENT DATABASE -->
+    <div id="viewStorage" class="tab-pane hidden max-w-5xl mx-auto p-2 md:p-4">
+      <div class="bg-white rounded-xl shadow p-3 md:p-5">
+        <div class="flex justify-between items-center mb-3 border-b pb-2 flex-wrap gap-2">
+          <div>
+            <h3 class="text-sm md:text-base font-bold text-sky-900"><i class="fa-solid fa-box-archive mr-2 text-sky-600"></i>সংরক্ষিত রোগী ও প্রেসক্রিপশন ডাটাবেজ</h3>
+            <p class="text-[11px] text-slate-500">রোগীর নাম, ফোন অথবা আইডি দিয়ে সার্চ করুন</p>
+          </div>
+          <div class="flex gap-1.5 flex-wrap text-xs">
+            <button onclick="document.getElementById('importBackupFile').click()" class="bg-slate-600 hover:bg-slate-700 text-white px-2.5 py-1 rounded"><i class="fa-solid fa-upload mr-1"></i> ইম্পোর্ট</button>
+            <input type="file" id="importBackupFile" accept=".json" class="hidden" onchange="importDataJSON(event)">
+            <button onclick="exportDataJSON()" class="bg-sky-700 hover:bg-sky-800 text-white px-2.5 py-1 rounded"><i class="fa-solid fa-download mr-1"></i> ব্যাকআপ নামান</button>
+            <button onclick="clearPatientHistory()" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded"><i class="fa-solid fa-trash mr-1"></i> ক্লিয়ার</button>
+          </div>
+        </div>
+
+        <input type="text" id="patientSearchInput" oninput="renderPatientsTable()" placeholder="🔍 নাম, ফোন, আইডি বা রোগ দিয়ে খুঁজুন..." class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs w-full mb-3 focus:outline-sky-500">
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs text-left border">
+            <thead class="bg-slate-100 font-bold border-b text-slate-700">
+              <tr>
+                <th class="p-2 border-r">তারিখ</th>
+                <th class="p-2 border-r">রোগীর নাম</th>
+                <th class="p-2 border-r">ফোন</th>
+                <th class="p-2 border-r">আইডি</th>
+                <th class="p-2 border-r">স্ট্যাটাস</th>
+                <th class="p-2 border-r">ডায়াগনোসিস / টেস্ট</th>
+                <th class="p-2 text-center">অ্যাকশন</th>
+              </tr>
+            </thead>
+            <tbody id="patientsTableBody" class="divide-y">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: REAL-TIME ANALYTICS -->
+    <div id="viewAnalytics" class="tab-pane hidden max-w-5xl mx-auto p-2 md:p-4">
+      <div class="bg-white rounded-xl shadow p-3 md:p-5">
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+          <div>
+            <h3 class="text-sm md:text-base font-bold text-sky-900"><i class="fa-solid fa-chart-line mr-2 text-indigo-600"></i>চেম্বার পেশেন্ট অ্যানালিটিক্স</h3>
+            <p class="text-[11px] text-slate-500">রোগীর রিয়েল-টাইম পরিসংখ্যান</p>
+          </div>
+          <button onclick="calculateAnalytics()" class="bg-sky-100 text-sky-800 hover:bg-sky-200 px-2.5 py-1 rounded text-xs font-semibold">
+            <i class="fa-solid fa-arrows-rotate mr-1"></i> রিফ্রেশ
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+          <div class="bg-sky-50 border border-sky-200 rounded-lg p-2.5">
+            <p class="text-[11px] font-semibold text-sky-800 mb-0.5">আজকে (Today)</p>
+            <h2 class="text-xl md:text-2xl font-black text-sky-950" id="statTodayCount">০ জন</h2>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-2.5">
+            <p class="text-[11px] font-semibold text-indigo-800 mb-0.5">চলতি সপ্তাহ (Week)</p>
+            <h2 class="text-xl md:text-2xl font-black text-indigo-950" id="statWeekCount">০ জন</h2>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5">
+            <p class="text-[11px] font-semibold text-emerald-800 mb-0.5">চলতি মাস (Month)</p>
+            <h2 class="text-xl md:text-2xl font-black text-emerald-950" id="statMonthCount">০ জন</h2>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+            <p class="text-[11px] font-semibold text-amber-800 mb-0.5">সর্বমোট (Total)</p>
+            <h2 class="text-xl md:text-2xl font-black text-amber-950" id="statTotalCount">০ জন</h2>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div class="border rounded-lg p-3 bg-slate-50">
+            <h4 class="font-bold text-slate-800 mb-2 border-b pb-1">প্রধান রোগসমূহ (Top Diagnoses)</h4>
+            <ul id="topDiseasesContainer" class="space-y-1 text-slate-700"></ul>
+          </div>
+          <div class="border rounded-lg p-3 bg-slate-50">
+            <h4 class="font-bold text-slate-800 mb-2 border-b pb-1">রোগীর লিঙ্গ অনুপাত (Gender Ratio)</h4>
+            <div class="flex items-center justify-between text-xs mt-3">
+              <div class="text-center w-1/2 border-r">
+                <span class="text-lg font-black text-sky-700" id="statMaleRatio">০%</span>
+                <p class="text-slate-500">পুরুষ (Male)</p>
+              </div>
+              <div class="text-center w-1/2">
+                <span class="text-lg font-black text-rose-600" id="statFemaleRatio">০%</span>
+                <p class="text-slate-500">মহিলা (Female)</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- QUICK TOOLS & CHIPS DRAWER -->
+  <div id="toolsDrawer" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex justify-end">
+    <div class="bg-white w-full max-w-sm h-full shadow-2xl p-4 overflow-y-auto flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-center border-b pb-2 mb-3">
+          <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> দ্রুত চেম্বার টুলস ও চিপস
+          </h3>
+          <button onclick="closeToolsDrawer()" class="text-slate-400 hover:text-slate-700 text-lg px-2">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Disease Presets / Templates (ITEM 8: Fixed!) -->
+        <div class="mb-3.5 bg-sky-50 p-2.5 rounded-lg border border-sky-200">
+          <label class="text-[11px] font-bold text-sky-950 mb-1 block">
+            <i class="fa-solid fa-file-medical mr-1 text-sky-700"></i> রোগভিত্তিক প্রেসক্রিপশন টেমপ্লেট:
+          </label>
+          <div class="flex gap-1.5">
+            <select id="drawerTemplateSelect" onchange="applySelectedTemplate(this.value)" class="border border-slate-300 rounded px-2 py-1.5 text-xs flex-1 bg-white">
+              <option value="">টেমপ্লেট বাছুন...</option>
+            </select>
+            <button onclick="saveCurrentAsTemplate()" class="bg-sky-700 hover:bg-sky-800 text-white px-2.5 py-1.5 rounded text-xs font-semibold shrink-0">+ সেভ</button>
+          </div>
+        </div>
+
+        <!-- Quick Dose Chips -->
+        <div class="mb-3">
+          <label class="text-[11px] font-bold text-slate-700 mb-1.5 block">
+            <i class="fa-solid fa-bolt text-amber-500 mr-1"></i> দ্রুত ওষুধের ডোজ চিপস:
+          </label>
+          <div class="grid grid-cols-2 gap-1.5 text-xs">
+            <button onclick="insertDoseChip('১+০+১ — খাবার পর')" class="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 p-2 rounded text-left font-medium">১+০+১ খাবার পর</button>
+            <button onclick="insertDoseChip('১+০+০ — সকালে খাবার পর')" class="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 p-2 rounded text-left font-medium">১+০+০ সকালে</button>
+            <button onclick="insertDoseChip('০+০+১ — রাতে খাবার পর')" class="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 p-2 rounded text-left font-medium">০+০+১ রাতে</button>
+            <button onclick="insertDoseChip('১+১+১ — খাবার পর')" class="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 p-2 rounded text-left font-medium">১+১+১ খাবার পর</button>
+            <button onclick="insertDoseChip('১+০+১ — খাবার ২০ মি. পূর্বে')" class="bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 p-2 rounded text-left font-medium">খাবার ২০ মি. পূর্বে</button>
+            <button onclick="insertDoseChip('০+১+০ — দুপুরে খাবার পর')" class="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 p-2 rounded text-left font-medium">০+১+০ দুপুরে</button>
+          </div>
+        </div>
+
+        <!-- Bangla Advice Chips -->
+        <div class="mb-3">
+          <label class="text-[11px] font-bold text-slate-700 mb-1.5 block">
+            <i class="fa-solid fa-notes-medical text-teal-600 mr-1"></i> বাংলা পরামর্শ চিপস (+ যোগ করুন):
+          </label>
+          <div class="flex flex-col gap-1 text-[11px]">
+            <button onclick="insertAdviceChip('লবণ ও চর্বিযুক্ত খাবার সম্পূর্ণ পরিহার করবেন।')" class="bg-slate-50 hover:bg-slate-100 border text-slate-800 px-2 py-1 rounded text-left">+ লবণ ও চর্বিযুক্ত খাবার নিষেধ</button>
+            <button onclick="insertAdviceChip('প্রতিদিন অন্তত ৩০-৪০ মিনিট নিয়ম করে হাঁটবেন।')" class="bg-slate-50 hover:bg-slate-100 border text-slate-800 px-2 py-1 rounded text-left">+ নিয়মিত ৩০-৪০ মিনিট হাঁটা</button>
+            <button onclick="insertAdviceChip('ধূমপান, জর্দা ও তামাকজাতীয় দ্রব্য বর্জন করুন।')" class="bg-slate-50 hover:bg-slate-100 border text-slate-800 px-2 py-1 rounded text-left">+ ধূমপান ও তামাক বর্জন</button>
+            <button onclick="insertAdviceChip('পর্যাপ্ত পানি পান করবেন এবং মানসিক দুশ্চিন্তা পরিহার করবেন।')" class="bg-slate-50 hover:bg-slate-100 border text-slate-800 px-2 py-1 rounded text-left">+ পর্যাপ্ত পানি ও দুশ্চিন্তা পরিহার</button>
+          </div>
+        </div>
+
+        <!-- Follow-up Date Calculators -->
+        <div class="mb-3">
+          <label class="text-[11px] font-bold text-slate-700 mb-1.5 block">
+            <i class="fa-solid fa-calendar-check text-emerald-600 mr-1"></i> ফলো-আপ তারিখ অটো-হিসাব:
+          </label>
+          <div class="grid grid-cols-3 gap-1.5 text-xs">
+            <button onclick="addFollowUpAdvice(7)" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-1.5 rounded font-semibold text-center">+৭ দিন পর</button>
+            <button onclick="addFollowUpAdvice(15)" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-1.5 rounded font-semibold text-center">+১৫ দিন পর</button>
+            <button onclick="addFollowUpAdvice(30)" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 py-1.5 rounded font-semibold text-center">+১ মাস পর</button>
+          </div>
+        </div>
+
+        <!-- Voice & Thermal -->
+        <div class="space-y-2 text-xs">
+          <button onclick="toggleVoiceDictation()" id="btnVoiceDictation" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-2 shadow-sm">
+            <i class="fa-solid fa-microphone"></i> <span id="txtBtnVoice">ভয়েস টাইপিং চালু করুন</span>
+          </button>
+          <div class="flex items-center justify-between p-2 bg-slate-100 rounded border">
+            <span class="font-semibold text-slate-700">80mm POS থার্মাল মোড</span>
+            <input type="checkbox" id="chkThermalMode" onchange="toggleThermalMode(this.checked)" class="w-4 h-4 rounded text-sky-600">
+          </div>
+        </div>
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="border-t pt-3 mt-3">
+        <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+          <button onclick="closeToolsDrawer();newPatientPrompt()" class="bg-sky-700 hover:bg-sky-800 text-white font-bold py-2 rounded-lg text-center"><i class="fa-solid fa-user-plus mr-1"></i> নতুন রোগী</button>
+          <button onclick="openSettingsModal()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded-lg text-center"><i class="fa-solid fa-gear mr-1"></i> সেটিংস</button>
+        </div>
+        <div class="flex justify-between items-center text-xs">
+          <button onclick="undoPrescriptionAction()" class="text-slate-600 hover:text-slate-900"><i class="fa-solid fa-rotate-left mr-1"></i> আনডু</button>
+          <button onclick="redoPrescriptionAction()" class="text-slate-600 hover:text-slate-900"><i class="fa-solid fa-rotate-right mr-1"></i> রিডু</button>
+          <button onclick="installPWA()" class="text-sky-700 font-bold hover:underline">অ্যাপ ইনস্টল</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIXED APP BOTTOM NAVIGATION -->
+  <nav id="appBottomNav" class="no-print fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-1.5 px-2 md:px-6 shadow-lg flex justify-around items-center z-40">
+    <button onclick="switchBottomTab('viewEditor', this)" class="nav-tab active flex flex-col items-center text-sky-700 font-bold text-[10.5px]">
+      <i class="fa-solid fa-file-prescription text-base mb-0.5"></i>
+      <span>প্রেসক্রিপশন</span>
+    </button>
+    <button onclick="openToolsDrawer()" class="nav-tab flex flex-col items-center text-slate-500 hover:text-sky-700 font-semibold text-[10.5px]">
+      <i class="fa-solid fa-wand-magic-sparkles text-base mb-0.5"></i>
+      <span>টুলস</span>
+    </button>
+    <button onclick="openDoctorProfileModal()" class="nav-tab flex flex-col items-center text-slate-500 hover:text-sky-700 font-semibold text-[10.5px]">
+      <i class="fa-solid fa-user-doctor text-base mb-0.5"></i>
+      <span>২০টি ফিল্ড</span>
+    </button>
+    <button onclick="openSettingsModal()" class="nav-tab flex flex-col items-center text-slate-500 hover:text-sky-700 font-semibold text-[10.5px]">
+      <i class="fa-solid fa-gear text-base mb-0.5"></i>
+      <span>সেটিংস</span>
+    </button>
+    <button onclick="switchBottomTab('viewStorage', this)" class="nav-tab flex flex-col items-center text-slate-500 hover:text-sky-700 font-semibold text-[10.5px]">
+      <i class="fa-solid fa-box-archive text-base mb-0.5"></i>
+      <span>হিস্ট্রি</span>
+    </button>
+    <button onclick="switchBottomTab('viewAnalytics', this)" class="nav-tab flex flex-col items-center text-slate-500 hover:text-sky-700 font-semibold text-[10.5px]">
+      <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
+      <span>অ্যানালিটিক্স</span>
+    </button>
+  </nav>
+
+  <!-- =========================================================================
+       MODALS SYSTEM:
+       1. Section Presets Modal (BP, Pulse, Temp, Complaints, Diagnosis, Tests, etc.)
+       2. Medicine Picker Modal (Full saved medicines library multi-selector)
+       3. Advice Picker Modal (Pre-selected defaults + custom advice checklist)
+       4. Settings Modal (5 Tabs)
+       5. Doctor Profile Modal (10 Bangla + 10 English fields)
+       6. Print Preview Modal (Live Editable)
+       ========================================================================= -->
+
+  <!-- MODAL 1: SECTION PRESETS MODAL (ITEM 3) -->
+  <div id="sectionPresetModal" class="modal-backdrop fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-2 md:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[88vh] flex flex-col overflow-hidden my-auto">
+      <div class="bg-sky-900 text-white px-4 py-2.5 flex justify-between items-center">
+        <h3 class="font-bold text-sm flex items-center gap-1.5" id="presetModalTitle">
+          <i class="fa-solid fa-folder-plus text-amber-400"></i> সেকশন টেমপ্লেট
+        </h3>
+        <button onclick="closeSectionPresetModal()" class="text-sky-200 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 overflow-y-auto flex-1 text-xs">
+        <!-- Add New Preset to this section -->
+        <div class="flex gap-1.5 mb-2.5 bg-slate-50 p-2 rounded border border-slate-200">
+          <input type="text" id="newSectionPresetInput" placeholder="নতুন টেমপ্লেট লিখুন..." class="border rounded px-2 py-1 flex-1 text-xs focus:outline-sky-500">
+          <button onclick="addNewPresetToCurrentSection()" class="bg-sky-700 hover:bg-sky-800 text-white font-semibold px-2.5 py-1 rounded text-xs shrink-0">+ যোগ</button>
+        </div>
+
+        <p class="text-[11px] text-slate-500 mb-1.5 font-medium">ক্লিক করলেই প্রেসক্রিপশনে যুক্ত হবে:</p>
+        <div id="presetChipsContainer" class="flex flex-wrap gap-1.5 max-h-60 overflow-y-auto p-1 border rounded bg-slate-50/50">
+          <!-- Dynamically populated chips -->
+        </div>
+      </div>
+
+      <div class="bg-slate-100 px-3 py-2 border-t flex justify-end">
+        <button onclick="closeSectionPresetModal()" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded font-semibold">বন্ধ করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: MEDICINE PICKER MODAL (ITEM 5) -->
+  <div id="medicinePickerModal" class="modal-backdrop fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-2 md:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden my-auto">
+      <div class="bg-indigo-900 text-white px-4 py-2.5 flex justify-between items-center">
+        <h3 class="font-bold text-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-capsules text-amber-400"></i> ঔষধ লাইব্রেরি থেকে বাছাই
+        </h3>
+        <button onclick="closeMedicinePickerModal()" class="text-indigo-200 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 overflow-y-auto flex-1 text-xs">
+        <div class="flex items-center gap-2 mb-2">
+          <input type="text" id="medPickerSearchInput" oninput="renderMedicinePickerList()" placeholder="🔍 ওষুধের নাম বা জেনেরিক দিয়ে খুঁজুন..." class="border rounded-lg px-2.5 py-1.5 w-full text-xs focus:outline-indigo-500">
+          <button onclick="openSettingsModal();switchSettingsTab('tabMeds');closeMedicinePickerModal();" class="text-indigo-700 hover:underline text-xs whitespace-nowrap font-bold shrink-0">+ নতুন ঔষধ বানান</button>
+        </div>
+
+        <div class="border rounded-lg divide-y max-h-72 overflow-y-auto" id="medicinePickerContainer">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <div class="bg-slate-100 px-4 py-2 border-t flex justify-between items-center text-xs">
+        <span class="text-slate-500">ক্লিক করলেই প্রেসক্রিপশনে যুক্ত হবে</span>
+        <button onclick="closeMedicinePickerModal()" class="bg-slate-800 text-white px-3 py-1.5 rounded font-semibold">সম্পন্ন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ADVICE PICKER MODAL (ITEM 6) -->
+  <div id="advicePickerModal" class="modal-backdrop fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-2 md:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden my-auto">
+      <div class="bg-teal-900 text-white px-4 py-2.5 flex justify-between items-center">
+        <h3 class="font-bold text-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-notes-medical text-amber-400"></i> পরামর্শ লাইব্রেরি ও ডিফল্ট নির্বাচন
+        </h3>
+        <button onclick="closeAdvicePickerModal()" class="text-teal-200 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 overflow-y-auto flex-1 text-xs">
+        <!-- Add new advice to library -->
+        <div class="flex gap-1.5 mb-2.5 bg-slate-50 p-2 rounded border border-slate-200">
+          <input type="text" id="newAdviceLibInput" placeholder="নতুন পরামর্শ লিখুন..." class="border rounded px-2.5 py-1 flex-1 text-xs focus:outline-teal-500">
+          <button onclick="addNewAdviceToLibraryFromPicker()" class="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-2.5 py-1 rounded text-xs shrink-0">+ লাইব্রেরিতে যোগ</button>
+        </div>
+
+        <p class="text-[11px] text-slate-500 mb-2 font-medium">যে পরামর্শগুলো প্রেসক্রিপশনে দিতে চান সেগুলো টিক দিন:</p>
+        <div id="adviceChecklistContainer" class="space-y-1.5 max-h-64 overflow-y-auto p-1 border rounded bg-slate-50/50">
+          <!-- Dynamically populated checkboxes -->
+        </div>
+      </div>
+
+      <div class="bg-slate-100 px-4 py-2 border-t flex justify-between items-center text-xs">
+        <button onclick="applySelectedAdviceToPrescription()" class="bg-teal-700 hover:bg-teal-800 text-white font-bold px-3 py-1.5 rounded">প্রেসক্রিপশনে বসান</button>
+        <button onclick="closeAdvicePickerModal()" class="text-slate-600 hover:text-slate-800 font-semibold">বন্ধ করুন</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: FULL SETTINGS & DATABASE MODAL (5 TABS) -->
+  <div id="settingsModal" class="modal-backdrop fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-2 md:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden my-auto">
+      
+      <!-- Settings Header -->
+      <div class="bg-sky-900 text-white px-4 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm md:text-base flex items-center gap-2">
+          <i class="fa-solid fa-gear"></i> প্রেসক্রিপশন সেটিংস ও ডাটাবেজ লাইব্রেরি
+        </h3>
+        <button onclick="closeSettingsModal()" class="text-sky-200 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Settings Sub-Tabs -->
+      <div class="flex border-b border-slate-200 bg-slate-50 text-xs font-semibold px-3 pt-2 gap-1.5 overflow-x-auto">
+        <button onclick="switchSettingsTab('tabMeds')" id="tabBtnMeds" class="set-tab-btn active px-3 py-1.5 border-b-2 border-sky-600 text-sky-700">ঔষধ লাইব্রেরি</button>
+        <button onclick="switchSettingsTab('tabComp')" id="tabBtnComp" class="set-tab-btn px-3 py-1.5 border-b-2 border-transparent text-slate-600">Chief Complaints</button>
+        <button onclick="switchSettingsTab('tabDiag')" id="tabBtnDiag" class="set-tab-btn px-3 py-1.5 border-b-2 border-transparent text-slate-600">Diagnosis</button>
+        <button onclick="switchSettingsTab('tabInvs')" id="tabBtnInvs" class="set-tab-btn px-3 py-1.5 border-b-2 border-transparent text-slate-600">Investigations</button>
+        <button onclick="switchSettingsTab('tabTmpl')" id="tabBtnTmpl" class="set-tab-btn px-3 py-1.5 border-b-2 border-transparent text-slate-600">রোগ অনুযায়ী টেমপ্লেট</button>
+        <button onclick="switchSettingsTab('tabMore')" id="tabBtnMore" class="set-tab-btn px-3 py-1.5 border-b-2 border-transparent text-slate-600 whitespace-nowrap">অন্যান্য / টপ নোট</button>
+      </div>
+
+      <!-- Settings Body -->
+      <div class="p-3 md:p-4 overflow-y-auto flex-1 text-xs">
+        
+        <div id="tabMore" class="settings-content hidden">
+          <div class="border rounded-md p-2.5 mb-3 bg-slate-50">
+            <h4 class="font-bold text-sky-900 mb-2">প্রেসক্রিপশনের উপরের লেখা (বিসমিল্লাহ / বার্তা)</h4>
+            <div class="grid grid-cols-2 gap-2 items-center">
+              <label class="col-span-2 flex items-center gap-1.5"><input type="checkbox" id="tnShow" onchange="saveTopNoteCfg()"> লেখাটি দেখান / প্রিন্টে রাখুন</label>
+              <input type="text" id="tnText" oninput="saveTopNoteCfg()" class="col-span-2 border rounded p-1.5" placeholder="লেখা (ফাঁকা রাখলে কিছু ছাপা হবে না)">
+              <select id="tnSize" onchange="saveTopNoteCfg()" class="border rounded p-1"><option value="9">ছোট</option><option value="10">স্বাভাবিক</option><option value="12">মাঝারি</option><option value="14">বড়</option><option value="16">অনেক বড়</option></select>
+              <select id="tnAlign" onchange="saveTopNoteCfg()" class="border rounded p-1"><option value="center">মাঝে</option><option value="flex-start">বামে</option><option value="flex-end">ডানে</option></select>
+              <select id="tnDecor" onchange="saveTopNoteCfg()" class="border rounded p-1"><option value="none">ডেকোরেশন নেই</option><option value="ornament">❖ অলংকার</option><option value="stars">✦ তারা</option><option value="box">বক্স</option><option value="double">ডাবল লাইন</option></select>
+              <label class="flex items-center gap-1.5">রং <input type="color" id="tnColor" onchange="saveTopNoteCfg()"></label>
+              <label class="flex items-center gap-1.5"><input type="checkbox" id="tnBold" onchange="saveTopNoteCfg()"> বোল্ড</label>
+              <label class="flex items-center gap-1.5"><input type="checkbox" id="tnItalic" onchange="saveTopNoteCfg()"> ইটালিক</label>
+              <button onclick="document.getElementById('tnText').value='বিসমিল্লাহির রাহমানির রাহিম';saveTopNoteCfg()" class="bg-slate-200 rounded px-2 py-1">ডিফল্ট লেখা</button>
+              <button onclick="document.getElementById('tnText').value='';saveTopNoteCfg()" class="bg-rose-100 text-rose-700 rounded px-2 py-1">লেখা মুছুন</button>
+            </div>
+          </div>
+          <div class="border rounded-md p-2.5">
+            <h4 class="font-bold text-sky-900 mb-2">সব পপআপ তালিকা (ভাইটালস, ইতিহাস, রেফার্ড, নোট, পরামর্শ ইত্যাদি)</h4>
+            <select id="moreCat" onchange="renderMore()" class="border rounded p-1.5 w-full mb-2"></select>
+            <div class="flex gap-1.5 mb-2"><input type="text" id="moreInput" class="border rounded px-2 py-1.5 flex-1" placeholder="নতুন আইটেম"><button onclick="moreAdd()" class="bg-sky-700 text-white font-semibold px-3 py-1.5 rounded">যোগ করুন</button></div>
+            <div class="border rounded-md divide-y max-h-60 overflow-y-auto" id="moreList"></div>
+          </div>
+          <button onclick="document.getElementById('aboutModal').classList.remove('hidden')" class="mt-3 text-sky-700 underline">ⓘ সফটওয়্যার তথ্য, সতর্কতা ও কপিরাইট</button>
+        </div>
+
+        <!-- Tab 1: Medicines Library -->
+        <div id="tabMeds" class="settings-content">
+          <div class="flex gap-1.5 mb-2.5">
+            <input type="text" id="newMedLibInput" placeholder="যেমন: Tab. Napa 500mg | (Paracetamol) | ১+০+১ খাবার পর | ৫ দিন" class="border border-slate-300 rounded px-2.5 py-1.5 flex-1 focus:outline-sky-500">
+            <button onclick="addMedicineToLibrary()" class="bg-sky-700 hover:bg-sky-800 text-white font-semibold px-3 py-1.5 rounded shrink-0">যোগ করুন</button>
+          </div>
+          <p class="text-[10.5px] text-slate-500 mb-2">ফরমেট: ব্র্যান্ড নাম | (জেনেরিক) | সেবনবিধি | মেয়াদ (পাইপ '|' দিয়ে ভাগ করুন)</p>
+          <div class="border rounded-md divide-y max-h-72 overflow-y-auto" id="libMedicineList"></div>
+        </div>
+
+        <!-- Tab 2: Complaints -->
+        <div id="tabComp" class="settings-content hidden">
+          <div class="flex gap-1.5 mb-2.5">
+            <input type="text" id="newCompLibInput" placeholder="যেমন: Fever for 3 days, Severe headache" class="border border-slate-300 rounded px-2.5 py-1.5 flex-1 focus:outline-sky-500">
+            <button onclick="addSimpleItemToLib('complaints', 'newCompLibInput')" class="bg-sky-700 hover:bg-sky-800 text-white font-semibold px-3 py-1.5 rounded shrink-0">যোগ করুন</button>
+          </div>
+          <div class="border rounded-md divide-y max-h-72 overflow-y-auto" id="libComplaintList"></div>
+        </div>
+
+        <!-- Tab 3: Diagnosis -->
+        <div id="tabDiag" class="settings-content hidden">
+          <div class="flex gap-1.5 mb-2.5">
+            <input type="text" id="newDiagLibInput" placeholder="যেমন: Acute Appendicitis, Type 2 Diabetes" class="border border-slate-300 rounded px-2.5 py-1.5 flex-1 focus:outline-sky-500">
+            <button onclick="addSimpleItemToLib('diagnosis', 'newDiagLibInput')" class="bg-sky-700 hover:bg-sky-800 text-white font-semibold px-3 py-1.5 rounded shrink-0">যোগ করুন</button>
+          </div>
+          <div class="border rounded-md divide-y max-h-72 overflow-y-auto" id="libDiagList"></div>
+        </div>
+
+        <!-- Tab 4: Investigations -->
+        <div id="tabInvs" class="settings-content hidden">
+          <div class="flex gap-1.5 mb-2.5">
+            <input type="text" id="newInvLibInput" placeholder="যেমন: CBC with ESR, USG of W/A" class="border border-slate-300 rounded px-2.5 py-1.5 flex-1 focus:outline-sky-500">
+            <button onclick="addSimpleItemToLib('investigations', 'newInvLibInput')" class="bg-sky-700 hover:bg-sky-800 text-white font-semibold px-3 py-1.5 rounded shrink-0">যোগ করুন</button>
+          </div>
+          <div class="border rounded-md divide-y max-h-72 overflow-y-auto" id="libInvList"></div>
+        </div>
+
+        <!-- Tab 5: Templates (ITEM 8: Fixed & Working with direct Apply button!) -->
+        <div id="tabTmpl" class="settings-content hidden">
+          <div class="flex justify-between items-center mb-2">
+            <p class="text-slate-600">সংরক্ষিত রোগভিত্তিক প্রেসক্রিপশন টেমপ্লেটসমূহ:</p>
+            <button onclick="saveCurrentAsTemplate()" class="bg-sky-700 text-white px-2.5 py-1 rounded text-xs font-semibold">+ বর্তমান প্রেসক্রিপশন টেমপ্লেট হিসেবে সেভ</button>
+          </div>
+          <div class="border rounded-md divide-y max-h-72 overflow-y-auto" id="libTemplateList"></div>
+        </div>
+
+      </div>
+
+      <!-- Settings Footer -->
+      <div class="bg-slate-100 px-4 py-2.5 border-t border-slate-200 flex justify-between items-center text-xs">
+        <button onclick="resetDefaultLibraries()" class="text-rose-600 hover:underline">ডিফল্ট লাইব্রেরিতে রিসেট করুন</button>
+        <button onclick="closeSettingsModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-1.5 rounded font-semibold">সংরক্ষণ ও বন্ধ</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 5: DOCTOR PROFILE & 20 CUSTOMIZABLE INPUT FIELDS MODAL (10 BANGLA + 10 ENGLISH) -->
+  <div id="doctorProfileModal" class="modal-backdrop fixed inset-0 bg-slate-900/70 z-50 hidden flex items-center justify-center p-2 md:p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[92vh] flex flex-col overflow-hidden my-auto">
+      
+      <!-- Modal Header -->
+      <div class="bg-sky-900 text-white px-4 py-3 flex justify-between items-center">
+        <h3 class="font-bold text-sm md:text-base flex items-center gap-2">
+          <i class="fa-solid fa-user-doctor"></i> ডাক্তার প্রফাইল
+        </h3>
+        <button onclick="closeDoctorProfileModal()" class="text-sky-200 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-3 md:p-4 overflow-y-auto flex-1 text-xs space-y-3.5">
+        
+        <!-- SECTION 1: 10 BANGLA + 10 ENGLISH CUSTOMIZABLE DOCTOR INFO FIELDS -->
+        <div class="border rounded-lg p-3 bg-slate-50">
+          <div class="flex justify-between items-center mb-2 border-b pb-1">
+            <h4 class="font-bold text-sky-900 text-sm">১. হেডারের কাস্টমাইজেবল ফিল্ড (বাংলা + ইংরেজি)</h4>
+            <span class="text-[10.5px] text-slate-500 font-medium">যে ফিল্ডগুলো পূরণ করবেন সেগুলো হেডারে শো করবে</span>
+          </div>
+          <p class="text-[11px] text-slate-600 mb-2.5">ডাক্তারের নাম, বিশেষত্ব, পদবি, হাসপাতাল, উচ্চতর ডিগ্রি, প্রশিক্ষণ ও বিএমডিসি নম্বর আপনার ইচ্ছেমতো সাজিয়ে লিখুন:</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            
+            <!-- Bangla Side: Lines 1 to 10 -->
+            <div class="space-y-1.5 border-r md:pr-3">
+              <span class="font-bold text-rose-700 text-xs block mb-1">বাম পাশ (বাংলা হেডার লাইন ১ থেকে ১০):</span>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ১ (বিশেষজ্ঞ ক্ষেত্র / টাইটেল):</label>
+                <input type="text" id="cfgBnLine1" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="হৃদরোগ ও মেডিসিন বিশেষজ্ঞ">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ২ (ডাক্তারের নাম):</label>
+                <input type="text" id="cfgBnLine2" class="w-full border rounded px-2.5 py-1 font-bold focus:outline-sky-500" placeholder="ডাঃ মোঃ আবু জাহিদ বসুনিয়া">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৩ (ডিগ্রীসমূহ ১):</label>
+                <input type="text" id="cfgBnLine3" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="এমবিবিএস (ঢাকা), বিসিএস (স্বাস্থ্য), এমডি (কার্ডিওলজি)">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৪ (ডিগ্রীসমূহ ২ / ফেলোশিপ):</label>
+                <input type="text" id="cfgBnLine4" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="এমএপিসি (ইউএসএ), এফএসিসি, এফইএসসি">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৫ (বর্তমান পদবি):</label>
+                <input type="text" id="cfgBnLine5" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="সহকারী অধ্যাপক, কার্ডিওলজি বিভাগ">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৬ (কর্মস্থল / হাসপাতাল):</label>
+                <input type="text" id="cfgBnLine6" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="রংপুর মেডিকেল কলেজ ও হাসপাতাল">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৭ (উচ্চতর প্রশিক্ষণ / ফেলোশিপ):</label>
+                <input type="text" id="cfgBnLine7" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="(ইন্টারভেনশনাল কার্ডিওলজিতে উচ্চতর প্রশিক্ষণ প্রাপ্ত)">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৮ (বিএমডিসি নম্বর):</label>
+                <input type="text" id="cfgBnLine8" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="BMDC Reg No. A-31789">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ৯ (অতিরিক্ত তথ্য ১):</label>
+                <input type="text" id="cfgBnLine9" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="সাবেক কনসালট্যান্ট, জাতীয় হৃদরোগ ইনস্টিটিউট">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">বাংলা লাইন ১০ (অতিরিক্ত তথ্য ২):</label>
+                <input type="text" id="cfgBnLine10" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="বাতজ্বর ও উচ্চ রক্তচাপে অভিজ্ঞ">
+              </div>
+            </div>
+
+            <!-- English Side: Lines 1 to 10 -->
+            <div class="space-y-1.5">
+              <span class="font-bold text-sky-800 text-xs block mb-1">ডান পাশ (ইংরেজি হেডার লাইন ১ থেকে ১০):</span>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 1 (Speciality / Title):</label>
+                <input type="text" id="cfgEnLine1" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="CARDIOLOGIST & MEDICINE SPECIALIST">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 2 (Doctor Name):</label>
+                <input type="text" id="cfgEnLine2" class="w-full border rounded px-2.5 py-1 font-bold focus:outline-sky-500" placeholder="Dr. Md. Abu Zahid Basunia">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 3 (Degrees 1):</label>
+                <input type="text" id="cfgEnLine3" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="MBBS (Dhaka), BCS (Health), MD (Cardiology)">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 4 (Degrees 2 / Fellowship):</label>
+                <input type="text" id="cfgEnLine4" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="MACC (USA), FACP (USA), FESC">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 5 (Designation):</label>
+                <input type="text" id="cfgEnLine5" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="Assistant Professor, Cardiology Department">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 6 (Hospital / College):</label>
+                <input type="text" id="cfgEnLine6" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="Rangpur Medical College & Hospital">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 7 (Training):</label>
+                <input type="text" id="cfgEnLine7" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="(Special Training in Interventional Cardiology)">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 8 (BMDC Reg No):</label>
+                <input type="text" id="cfgEnLine8" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="BMDC Reg No. A-31789">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 9 (Extra Info 1):</label>
+                <input type="text" id="cfgEnLine9" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="Ex-Consultant, NICVD, Dhaka">
+              </div>
+              <div>
+                <label class="font-semibold text-slate-700 block mb-0.5">English Line 10 (Extra Info 2):</label>
+                <input type="text" id="cfgEnLine10" class="w-full border rounded px-2.5 py-1 focus:outline-sky-500" placeholder="Hypertension & Vascular Specialist">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SECTION 2: MULTI-CHAMBER MANAGEMENT -->
+        <div class="border rounded-lg p-3 bg-slate-50">
+          <div class="flex justify-between items-center mb-1.5 border-b pb-1">
+            <h4 class="font-bold text-sky-900 text-sm">২. একাধিক চেম্বার ও সময়সূচী</h4>
+            <button onclick="addNewChamberConfigRow()" class="bg-sky-700 hover:bg-sky-800 text-white font-semibold px-2 py-1 rounded text-xs">
+              <i class="fa-solid fa-plus mr-1"></i> নতুন চেম্বার
+            </button>
+          </div>
+          <div id="chamberConfigContainer" class="space-y-2"></div>
+        </div>
+
+        <!-- SECTION 3: LOGO & SIGNATURE RESET -->
+        <div class="border rounded-lg p-3 bg-slate-50 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h5 class="font-bold text-slate-800">লোগো ও ডিজিটাল স্বাক্ষর রিসেট</h5>
+            <p class="text-[10.5px] text-slate-500">প্রয়োজনে পূর্বের আপলোড করা লোগো বা স্বাক্ষর মুছে ফেলতে পারেন।</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="resetAsset('logo')" class="text-rose-600 hover:text-rose-800 border border-rose-300 px-2 py-1 rounded">লোগো মুছুন</button>
+            <button onclick="resetAsset('sig')" class="text-rose-600 hover:text-rose-800 border border-rose-300 px-2 py-1 rounded">স্বাক্ষর মুছুন</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-slate-100 px-4 py-2.5 border-t border-slate-200 flex justify-between items-center text-xs">
+        <span class="text-slate-500">ডাটা সেভ করলে তা স্থায়ীভাবে সংরক্ষিত থাকবে।</span>
+        <button onclick="saveDoctorProfileModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold">
+          <i class="fa-solid fa-floppy-disk mr-1"></i> প্রফাইল সংরক্ষণ করুন
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 6: LIVE FULLY EDITABLE PRINT PREVIEW MODAL (ITEM 7: WITH DIRECT PICKERS ACCESS) -->
+  <div id="printPreviewModal" class="modal-backdrop fixed inset-0 bg-black/80 z-50 hidden flex flex-col justify-between p-1 md:p-3">
+    <div class="w-full max-w-5xl mx-auto bg-sky-900 text-white rounded-t-lg px-3 py-2 flex justify-between items-center text-xs flex-wrap gap-2">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-bold"><i class="fa-solid fa-pen-to-square mr-1"></i> লাইভ এডিটেবল প্রিন্ট প্রিভিউ</span>
+        <span id="fitInfoBadge" class="text-[10px] px-2 py-0.5 rounded bg-emerald-600 font-bold">১ পেজে লকড ✓</span>
+        
+        <!-- Quick Action Pickers directly inside Preview Modal! -->
+        <button onclick="openMedicinePickerModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-0.5 rounded font-bold text-[10px]">
+          <i class="fa-solid fa-capsules"></i> + ঔষধ বাছাই
+        </button>
+        <button onclick="openAdvicePickerModal()" class="bg-teal-700 hover:bg-teal-600 text-white px-2 py-0.5 rounded font-bold text-[10px]">
+          <i class="fa-solid fa-square-check"></i> + পরামর্শ বাছাই
+        </button>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <button onclick="confirmAndExecutePrint()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded shadow text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-print"></i> এখনই প্রিন্ট / PDF সেভ
+        </button>
+        <button onclick="closePrintPreviewModal()" class="text-sky-200 hover:text-white text-base px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="w-full max-w-5xl mx-auto bg-slate-300 flex-1 overflow-y-auto p-1 md:p-3 flex justify-center items-start">
+      <div id="modalA4Container" class="bg-white shadow-2xl w-full max-w-[210mm] overflow-hidden rounded">
+        <!-- Live editable clone rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <button onclick="document.getElementById('aboutModal').classList.remove('hidden')" class="no-print fixed right-2 bottom-20 z-40 w-7 h-7 rounded-full bg-slate-700/70 text-white text-xs" title="সফটওয়্যার তথ্য">ⓘ</button>
+  <div id="aboutModal" class="no-print hidden fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-3">
+    <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 text-xs leading-relaxed text-slate-700">
+      <h3 class="text-base font-bold text-sky-900 mb-1">Rx Pro Ultra Chamber Studio</h3>
+      <p>সংস্করণ: ১.০ • নির্মাতা: <b>[মোঃ জসিম উদ্দীন]</b> • যোগাযোগ: <jasimubd3@gmail.com]</b></p>
+      <p class="mt-2 font-bold text-rose-700">⚠ সতর্কতা</p>
+      <ul class="list-disc pl-4 space-y-1">
+        <li>এটি প্রেসক্রিপশন তৈরি ও সংরক্ষণের সহায়ক টুল। চিকিৎসা সিদ্ধান্ত ও ওষুধের ডোজের চূড়ান্ত দায়িত্ব নিবন্ধিত চিকিৎসকের।</li>
+        <li>সফটওয়্যারের নমুনা ওষুধ, ডোজ ও পরামর্শ কেবল উদাহরণ; ব্যবহারের আগে নিজে যাচাই করুন।</li>
+        <li>সব রোগীর তথ্য শুধু এই ডিভাইসের ব্রাউজারে থাকে। নিয়মিত ব্যাকআপ নিন; ব্রাউজার ডেটা মুছলে তথ্য হারাবে।</li>
+        <li>রোগীর ব্যক্তিগত তথ্য গোপন রাখা ব্যবহারকারীর দায়িত্ব। জরুরি চিকিৎসার বিকল্প নয়।</li>
+        <li>সফটওয়্যারটি "যেমন আছে" ভিত্তিতে দেওয়া; ব্যবহারজনিত ক্ষতির দায় নির্মাতা বহন করেন না।</li>
+      </ul>
+      <p class="mt-2">© ২০২৬ [মোঃ জসিম উদ্দীন]। সর্বস্বত্ব সংরক্ষিত। অনুমতি ছাড়া বিক্রি বা নিজের নামে প্রচার নিষিদ্ধ।</p>
+      <button onclick="document.getElementById('aboutModal').classList.add('hidden')" class="mt-3 bg-sky-700 text-white font-bold px-4 py-1.5 rounded">বন্ধ করুন</button>
+    </div>
+  </div>
+
+  <!-- FLOATING AUTOCOMPLETE DROPDOWN -->
+  <div id="autocompleteDropdown" class="autocomplete-items hidden"></div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="no-print fixed left-1/2 -translate-x-1/2 bottom-20 bg-slate-900 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[60] hidden max-w-[90vw] text-center"></div>
+
+  <!-- APPLICATION ENGINE JAVASCRIPT -->
+  <script>
+    /* =====================================================================
+       Rx Pro Ultra Chamber Studio - Single File Architecture
+       ===================================================================== */
+    'use strict';
+
+    // 1. DGDA BANGLADESH TOP MEDICINES INITIAL DATASET
+    const DEFAULT_DGDA_MEDICINES = [
+      { brand: "Tab. Pidogrel 75mg", generic: "(Clopidogrel)", dose: "০+১+০ — দুপুরে খাবার পর", duration: "চলবে" },
+      { brand: "Tab. Cardicor 2.5mg", generic: "(Bisoprolol)", dose: "১+০+০ — সকালে খাবার পর", duration: "চলবে" },
+      { brand: "Tab. Telma 40mg", generic: "(Telmisartan)", dose: "০+০+১ — রাতে খাবার পর", duration: "চলবে" },
+      { brand: "Tab. Citritol", generic: "(Potassium Citrate)", dose: "১+০+১ — খাবার পর", duration: "চলবে" },
+      { brand: "Cap. Uromax 0.4mg", generic: "(Tamsulosin)", dose: "০+০+১ — রাতে শোবার পূর্বে", duration: "চলবে" },
+      { brand: "Tab. Corangi 10mg", generic: "(Nicorandil)", dose: "১+০+১ — খাবার পর", duration: "চলবে" },
+      { brand: "Tab. Efodio 10mg", generic: "(Empagliflozin)", dose: "১+০+০ — সকালে খাবার পর", duration: "৭ দিন" },
+      { brand: "Tab. Fixx 20mg", generic: "(Furosemide)", dose: "১+০+০ — সকালে খাবার পর", duration: "৭ দিন" },
+      { brand: "Tab. Clonapin 0.5mg", generic: "(Clonazepam)", dose: "০+০+১ — রাতে খাবার পর", duration: "৭ দিন" },
+      { brand: "Tab. Prazopres 1mg", generic: "(Prazosin)", dose: "১+০+১ — খাবার পর", duration: "চলবে" },
+      { brand: "Cap. Maxpro 20mg", generic: "(Esomeprazole)", dose: "১+০+১ — খাবার ২০ মি. পূর্বে", duration: "১৪ দিন" },
+      { brand: "Tab. Napa Extend 665mg", generic: "(Paracetamol)", dose: "১+০+১ — খাবার পর", duration: "৫ দিন" },
+      { brand: "Tab. Calbo D", generic: "(Calcium + Vit D3)", dose: "০+১+০ — দুপুরে খাবার পর", duration: "১ মাস" },
+      { brand: "Syp. Tofen", generic: "(Ketotifen)", dose: "২ চামচ — রাতে খাবার পর", duration: "১০ দিন" }
+    ];
+
+    // DEFAULT CHAMBERS CONFIGURATION
+    const DEFAULT_CHAMBERS = [
+      {
+        id: "ch_1",
+        name: "ডাক্টরস ডায়াগনস্টিক সেন্টার (ইউনিট-১)",
+        address: "ধাপ, জেল রোড, রংপুর (সদর হাসপাতালের সামনে)",
+        serial: "সিরিয়াল: ০১৭১৪-৮৮৪৮৫২, ০১৭৩৬-১৬৪৫২৭",
+        timing: "বিকাল ৪টা - রাত ৯টা (শুক্রবার বন্ধ)",
+        hotline: "০১৭০১-১৮১৮১৫",
+        email: "info.ddcunit1@gmail.com"
+      },
+      {
+        id: "ch_2",
+        name: "পপুলার ডায়াগনস্টিক সেন্টার",
+        address: "জেল রোড, রংপুর",
+        serial: "সিরিয়াল: ০৯৬১৩-৭৮৭৮০০",
+        timing: "সন্ধ্যা ৬টা - রাত ১০টা (শুক্রবার বিকাল ৪টা)",
+        hotline: "০১৭১২-০০০০০০",
+        email: "popular.rangpur@gmail.com"
+      }
+    ];
+
+    // DEFAULT SECTION PRESETS (ITEM 3 & 6)
+    const DEFAULT_SECTION_PRESETS = {
+      vital_bp: ["120/80", "130/85", "140/90", "150/95", "160/100", "110/70", "90/60"],
+      vital_pulse: ["72/m", "78/m", "84/m", "90/m", "64/m", "102/m (Tachycardia)"],
+      vital_weight: ["55 kg", "60 kg", "65 kg", "68 kg", "72 kg", "78 kg", "85 kg"],
+      vital_height: ["5'2\"", "5'4\"", "5'5\"", "5'6\"", "5'7\"", "5'8\"", "5'10\"", "165 cm"],
+      vital_spo2: ["98%", "99%", "97%", "95%", "92% (Low SpO2)"],
+      vital_temp: ["98.4°F (Normal)", "99.0°F", "100.0°F", "101.5°F", "102.0°F"],
+      vital_rbs: ["5.5 mmol/L (Fasting)", "7.2 mmol/L (Random)", "9.5 mmol/L", "12.0 mmol/L (High)"],
+      complaints: [
+        "Chest pain on exertion (2 months)",
+        "Shortness of breath on walking",
+        "Palpitation & high BP",
+        "Fever with chills (3 days)",
+        "Severe persistent headache",
+        "Burning sensation in chest / Heartburn",
+        "Generalized body ache & weakness"
+      ],
+      history: [
+        "Hypertension for 5 years",
+        "Non-diabetic",
+        "Old MI",
+        "Bronchial Asthma",
+        "Chronic Kidney Disease",
+        "No known drug allergy"
+      ],
+      diagnosis: [
+        "Stable Angina Pectoris",
+        "Primary Hypertension",
+        "Type 2 Diabetes Mellitus",
+        "Heart Failure (NYHA Class II)",
+        "GERD (Peptic Ulcer Disease)",
+        "Dyslipidemia",
+        "Acute Upper Respiratory Tract Infection"
+      ],
+      investigations: [
+        "ECG (12 Leads)",
+        "Echo 2D with Color Doppler",
+        "Serum Lipid Profile",
+        "Serum Creatinine with eGFR",
+        "CBC with ESR",
+        "Chest X-Ray P/A View",
+        "HbA1c & Fasting Blood Sugar",
+        "Urine R/M/E"
+      ],
+      referred: [
+        "কার্ডিওলজি ক্যাথল্যাব / এনজিওগ্রাম প্রয়োজনার্থে",
+        "সিসিইউ (CCU) / জরুরি বিভাগ",
+        "মেডিসিন বহির্বিভাগ / স্পেশালিস্ট কেয়ার",
+        "নিকটস্থ কার্ডিয়াক সেন্টার"
+      ],
+      notes: [
+        "জরুরি প্রয়োজনে দ্রুত নিকটস্থ কার্ডিয়াক সেন্টারে যোগাযোগ করবেন।",
+        "ওষুধ নিয়মিত সেবন করবেন, নিজে থেকে বন্ধ করবেন না।",
+        "লক্ষণ বৃদ্ধি পেলে দ্রুত হাসপাতালে আসুন।"
+      ],
+      advice: [
+        { text: "লবণ ও চর্বিযুক্ত খাবার সম্পূর্ণ পরিহার করবেন।", defaultChecked: true },
+        { text: "প্রতিদিন অন্তত ৩০-৪০ মিনিট নিয়ম করে হাঁটবেন।", defaultChecked: true },
+        { text: "১৫ দিন পর সকল রিপোর্ট সহ পুনরায় সাক্ষাত করবেন।", defaultChecked: true },
+        { text: "বুকে চাপ বা তীব্র ব্যথা অনুভূত হলে দ্রুত নিকটস্থ হাসপাতালে যোগাযোগ করবেন।", defaultChecked: true },
+        { text: "ধূমপান, জর্দা ও তামাকজাতীয় দ্রব্য বর্জন করুন।", defaultChecked: false },
+        { text: "পর্যাপ্ত পানি পান করবেন এবং মানসিক দুশ্চিন্তা পরিহার করবেন।", defaultChecked: false },
+        { text: "ডায়াবেটিস রোগীদের মিষ্টি জাতীয় খাবার সম্পূর্ণ নিষেধ।", defaultChecked: false }
+      ]
+    };
+
+    // APPLICATION STATE STORE (WITH 10 BANGLA + 10 ENGLISH DOCTOR FIELDS)
+    let appDb = null;
+    try {
+      appDb = JSON.parse(localStorage.getItem('rx_chamber_core_v10') || 'null');
+    } catch(e) { appDb = null; }
+
+    if (!appDb) {
+      appDb = {
+        topSpecialNote: "বিসমিল্লাহির রাহমানির রাহিম",
+        doctorLines: {
+          bn: {
+            line1: "হৃদরোগ ও মেডিসিন বিশেষজ্ঞ",
+            line2: "ডাঃ মোঃ জসিম উদ্দীন ",
+            line3: "এমবিবিএস (ঢাকা), বিসিএস (স্বাস্থ্য), এমডি (কার্ডিওলজি)",
+            line4: "এমএপিসি (ইউএসএ), এফএসিসি, এফইএসসি",
+            line5: "সহকারী অধ্যাপক, কার্ডিওলজি বিভাগ",
+            line6: "রংপুর মেডিকেল কলেজ ও হাসপাতাল",
+            line7: "(ইন্টারভেনশনাল কার্ডিওলজিতে উচ্চতর প্রশিক্ষণ প্রাপ্ত)",
+            line8: "BMDC Reg No. A-00000",
+            line9: "",
+            line10: ""
+          },
+          en: {
+            line1: "CARDIOLOGIST & MEDICINE SPECIALIST",
+            line2: "Dr. Md. Jasim Uddin",
+            line3: "MBBS (Dhaka), BCS (Health), MD (Cardiology)",
+            line4: "MACC (USA), FACP (USA), FESC",
+            line5: "Assistant Professor, Cardiology Department",
+            line6: "Rangpur Medical College & Hospital",
+            line7: "(Special Training in Interventional Cardiology)",
+            line8: "BMDC Reg No. A-00000",
+            line9: "",
+            line10: ""
+          }
+        },
+        chambers: DEFAULT_CHAMBERS,
+        activeChamberId: "ch_1",
+        medicinesLibrary: JSON.parse(JSON.stringify(DEFAULT_DGDA_MEDICINES)),
+        sectionPresets: JSON.parse(JSON.stringify(DEFAULT_SECTION_PRESETS)),
+        templates: [],
+        patients: []
+      };
+      saveDb();
+    } else {
+      // Ensure sectionPresets exist
+      if (!appDb.sectionPresets) {
+        appDb.sectionPresets = JSON.parse(JSON.stringify(DEFAULT_SECTION_PRESETS));
+        saveDb();
+      }
+    }
+
+    appDb.sectionPresets = appDb.sectionPresets || {};
+    Object.keys(DEFAULT_SECTION_PRESETS).forEach(k => { if (!appDb.sectionPresets[k]) appDb.sectionPresets[k] = JSON.parse(JSON.stringify(DEFAULT_SECTION_PRESETS[k])); });
+    ['patients','templates','medicinesLibrary','chambers'].forEach(k => { if (!Array.isArray(appDb[k])) appDb[k] = []; });
+    if (!appDb.chambers.length) appDb.chambers = JSON.parse(JSON.stringify(DEFAULT_CHAMBERS));
+    if (!appDb.doctorLines) appDb.doctorLines = { bn: {}, en: {} };
+    // UTILITIES
+    const BN = '০১২৩৪৫৬৭৮৯';
+    const toBn = s => String(s == null ? '' : s).replace(/[0-9]/g, d => BN[d]);
+    const toEn = s => String(s == null ? '' : s).replace(/[০-৯]/g, d => BN.indexOf(d));
+    const pad2 = n => String(n).padStart(2, '0');
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    function saveDb() {
+      try {
+        localStorage.setItem('rx_chamber_core_v10', JSON.stringify(appDb));
+        return true;
+      } catch(e) {
+        toast('মেমোরি লোড বেশি হয়েছে — ব্যাকআপ নিয়ে হিস্ট্রি ক্লিয়ার করুন');
+        return false;
+      }
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.add('hidden'), 3200);
+    }
+
+    function setStatus(msg) {
+      const el = document.getElementById('txtAutoSaveStatus');
+      if (el) el.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> ${msg}`;
+    }
+
+    function getNextPatientId() {
+      let maxId = 1000;
+      if (appDb && appDb.patients) {
+        for (let i = 0; i < appDb.patients.length; i++) {
+          const val = parseInt(toEn(appDb.patients[i].id), 10);
+          if (!isNaN(val) && val > maxId) maxId = val;
+        }
+      }
+      return String(maxId + 1);
+    }
+
+    function getTodayBnDate() {
+      const d = new Date();
+      return toBn(`${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`);
+    }
+
+    // ITEM 1: TOP SPECIAL NOTE
+    function clearTopNote() {
+      const el = document.getElementById('topSpecialNote');
+      if (el) {
+        el.innerText = '';
+        saveAutoSnapshot();
+      }
+    }
+
+    // ITEM 2: SEX RADIO BUTTON LOGIC
+    let currentPatientSex = 'Male';
+    function updateSexRadio(val) {
+      currentPatientSex = val;
+      const printSpan = document.getElementById('patientSexPrint');
+      if (printSpan) printSpan.innerText = val;
+      saveAutoSnapshot();
+    }
+
+    function setSexRadioUI(val) {
+      currentPatientSex = val || 'Male';
+      const rM = document.getElementById('sexRadioM');
+      const rF = document.getElementById('sexRadioF');
+      const rO = document.getElementById('sexRadioO');
+      const printSpan = document.getElementById('patientSexPrint');
+
+      if (val === 'Female' || val === 'F') {
+        if (rF) rF.checked = true;
+        if (printSpan) printSpan.innerText = 'Female';
+      } else if (val === 'Other') {
+        if (rO) rO.checked = true;
+        if (printSpan) printSpan.innerText = 'Other';
+      } else {
+        if (rM) rM.checked = true;
+        if (printSpan) printSpan.innerText = 'Male';
+      }
+    }
+
+    // UNDO & REDO MANAGEMENT
+    let undoHistory = [];
+    let redoHistory = [];
+
+    function snapHtml() {
+      const c = document.getElementById('prescriptionCanvas');
+      const k = c.cloneNode(true);
+      ['logoContainer', 'sigContainer'].forEach(i => { const e = k.querySelector('#' + i); if (e) e.innerHTML = ''; });
+      return k.innerHTML;
+    }
+    function restoreCanvasHtml(html) {
+      document.getElementById('prescriptionCanvas').innerHTML = html;
+      activeInputTarget = null;
+      setSexRadioUI(currentPatientSex);
+      renderLogoAndSignatureAssets();
+      adjustColumnLayout();
+      updateCapacityBadge();
+      refreshDynamicElements();
+      saveAutoSnapshot();
+    }
+    function pushPrescriptionState() {
+      if (!document.getElementById('prescriptionCanvas')) return;
+      const html = snapHtml();
+      if (undoHistory.length && undoHistory[undoHistory.length - 1] === html) return;
+      undoHistory.push(html);
+      if (undoHistory.length > 40) undoHistory.shift();
+      redoHistory = [];
+      saveAutoSnapshot();
+    }
+    function undoPrescriptionAction() {
+      if (!undoHistory.length) { toast('আর কোনো আনডু রেকর্ড নেই'); return; }
+      redoHistory.push(snapHtml());
+      restoreCanvasHtml(undoHistory.pop());
+      toast('আনডু সফল হয়েছে');
+    }
+    function redoPrescriptionAction() {
+      if (!redoHistory.length) { toast('কোনো রিডু রেকর্ড নেই'); return; }
+      undoHistory.push(snapHtml());
+      restoreCanvasHtml(redoHistory.pop());
+      toast('রিডু সফল হয়েছে');
+    }
+
+    let activeInputTarget = null;
+    function setActiveTarget(el) { activeInputTarget = el; }
+
+    // ITEM 3: CLEAN LIST ITEM ADD (NO JUNK DEMO TEXT!)
+    function addCleanListItem(listId) {
+      pushPrescriptionState();
+      const ul = document.getElementById(listId);
+      if (!ul) return;
+      const li = document.createElement('li');
+      li.className = "group";
+      let category = 'complaints';
+      if (listId === 'historyList') category = 'history';
+      if (listId === 'diagnosisList') category = 'diagnosis';
+      if (listId === 'investigationList') category = 'investigations';
+
+      li.innerHTML = `
+        <span contenteditable="true" data-ph="লিখুন..." onfocus="setActiveTarget(this)" oninput="showSuggest(event, '${category}')" onblur="saveAutoSnapshot()"></span>
+        <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      ul.appendChild(li);
+      const span = li.querySelector('span');
+      if (span) span.focus();
+    }
+
+    function removeListItem(btn) {
+      pushPrescriptionState();
+      const li = btn.closest('li');
+      if (li) li.remove();
+      saveAutoSnapshot();
+    }
+
+    // ITEM 3: SECTION PRESET PICKER MODAL (ALL VITALS + SECTIONS)
+    let currentPresetCategory = '';
+    let currentPresetTargetId = '';
+
+    function openSectionPresetModal(categoryKey, targetElementId, titleText) {
+      currentPresetCategory = categoryKey;
+      currentPresetTargetId = targetElementId;
+      document.getElementById('presetModalTitle').innerHTML = `<i class="fa-solid fa-folder-plus text-amber-400"></i> ${titleText}`;
+      renderSectionPresetsChips();
+      document.getElementById('sectionPresetModal').classList.remove('hidden');
+    }
+
+    function closeSectionPresetModal() {
+      document.getElementById('sectionPresetModal').classList.add('hidden');
+    }
+
+    function renderSectionPresetsChips() {
+      const container = document.getElementById('presetChipsContainer');
+      container.innerHTML = '';
+      const list = (appDb.sectionPresets && appDb.sectionPresets[currentPresetCategory]) || [];
+
+      if (list.length === 0) {
+        container.innerHTML = '<span class="text-slate-400 text-xs p-2">কোনো সংরক্ষিত টেমপ্লেট নেই</span>';
+        return;
+      }
+
+      list.forEach((itemText, idx) => {
+        const chip = document.createElement('div');
+        chip.className = "inline-flex items-center gap-1 bg-white border border-slate-300 hover:border-sky-500 hover:bg-sky-50 rounded px-2 py-1 text-xs text-slate-800 shadow-sm cursor-pointer";
+        chip.innerHTML = `
+          <span onclick="applyPresetToTarget('${escapeQuotes(itemText)}')">${esc(itemText)}</span>
+          <button onclick="deleteSectionPreset(${idx});event.stopPropagation();" class="text-slate-300 hover:text-rose-600 ml-1 text-[10px]"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        container.appendChild(chip);
+      });
+    }
+
+    function escapeQuotes(str) {
+      return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    function applyPresetToTarget(text) {
+      const target = document.getElementById(currentPresetTargetId);
+      if (!target) return;
+      pushPrescriptionState();
+
+      if (target.tagName === 'UL') {
+        // Append as list item
+        const li = document.createElement('li');
+        li.className = "group";
+        li.innerHTML = `
+          <span contenteditable="true" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()">${esc(text)}</span>
+          <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        target.appendChild(li);
+      } else {
+        // Direct value replacement (e.g. vitalBP, vitalPulse, vitalWeight, refTargetText, etc.)
+        target.innerText = text;
+        if (currentPresetTargetId === 'vitalWeight' || currentPresetTargetId === 'vitalHeight') {
+          calculateBMI();
+        }
+      }
+
+      saveAutoSnapshot();
+      closeSectionPresetModal();
+      toast('টেমপ্লেট যুক্ত হয়েছে');
+    }
+
+    function addNewPresetToCurrentSection() {
+      const input = document.getElementById('newSectionPresetInput');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!appDb.sectionPresets[currentPresetCategory]) appDb.sectionPresets[currentPresetCategory] = [];
+      appDb.sectionPresets[currentPresetCategory].unshift(val);
+      input.value = '';
+      saveDb();
+      renderSectionPresetsChips();
+      toast('নতুন টেমপ্লেট সংরক্ষিত হয়েছে');
+    }
+
+    function deleteSectionPreset(idx) {
+      if (confirm('এই টেমপ্লেটটি মুছে ফেলতে চান?')) {
+        appDb.sectionPresets[currentPresetCategory].splice(idx, 1);
+        saveDb();
+        renderSectionPresetsChips();
+      }
+    }
+
+    // ITEM 4: RENDER MEDICINES (CLEAN WITHOUT JUNK TEXT!)
+    function renderMedicineList(list) {
+      const container = document.getElementById('medicineContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      (list || []).forEach(m => {
+        container.appendChild(createMedicineRowElement(m.brand || '', m.generic || '', m.dose || '', m.duration || ''));
+      });
+      adjustColumnLayout();
+      updateCapacityBadge();
+    }
+
+    function createMedicineRowElement(brand, generic, dose, duration) {
+      const div = document.createElement('div');
+      div.className = "med-row flex items-start justify-between border-b border-dashed border-slate-200 pb-1 relative group";
+      div.innerHTML = `
+        <div class="flex-1 pr-1.5">
+          <div class="flex items-center gap-1">
+            <span class="med-number"></span>
+            <span contenteditable="true" data-ph="ঔষধের নাম" onfocus="setActiveTarget(this)" oninput="showSuggest(event, 'medicine')" onblur="saveAutoSnapshot()" class="font-bold text-slate-900">${esc(brand)}</span>
+            <button onclick="removeMedicineRow(this)" class="no-print text-rose-500 opacity-0 group-hover:opacity-100 text-[9px] ml-1" title="মুছে ফেলুন"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+          <div contenteditable="true" data-ph="(জেনেরিক)" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()" class="text-[8.5px] md:text-[9px] text-slate-500 italic pl-3 leading-tight">${esc(generic)}</div>
+          <div contenteditable="true" data-ph="ডোজ (যেমন: ১+০+১)" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()" class="med-dose-field text-[8.5px] md:text-[9px] text-sky-800 font-semibold pl-3 mt-0.5 leading-tight">${esc(dose)}</div>
+        </div>
+        <div class="text-right whitespace-nowrap">
+          <span contenteditable="true" data-ph="মেয়াদ" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()" class="inline-block text-[7.5px] md:text-[8px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-800">${esc(duration)}</span>
+        </div>
+      `;
+      return div;
+    }
+
+    // Clean Medicine Add without demo text!
+    function addNewMedicineClean() {
+      pushPrescriptionState();
+      const count = document.querySelectorAll('.med-row').length;
+      if (count >= 16) {
+        toast('সতর্কতা: ১৬টির বেশি ওষুধ দিলে প্রিন্ট ফন্ট ছোট হবে');
+      }
+      const container = document.getElementById('medicineContainer');
+      // Fields are empty with placeholders! Doctor types directly!
+      const el = createMedicineRowElement("", "", "", "");
+      container.appendChild(el);
+      adjustColumnLayout();
+      updateCapacityBadge();
+      const firstEditable = el.querySelector('[contenteditable="true"]');
+      if (firstEditable) firstEditable.focus();
+    }
+
+    function removeMedicineRow(btn) {
+      pushPrescriptionState();
+      const row = btn.closest('.med-row');
+      if (row) row.remove();
+      adjustColumnLayout();
+      updateCapacityBadge();
+    }
+
+    function adjustColumnLayout() {
+      const container = document.getElementById('medicineContainer');
+      if (!container) return;
+      const count = document.querySelectorAll('.med-row').length;
+      if (window.innerWidth > 768) {
+        container.className = count <= 7 
+          ? "med-counter grid grid-cols-1 gap-y-2 text-[10px]" 
+          : "med-counter grid grid-cols-2 gap-x-2.5 gap-y-1 text-[9.5px]";
+      }
+    }
+
+    function updateCapacityBadge() {
+      const count = document.querySelectorAll('.med-row').length;
+      const label = document.getElementById('medCapacityLabel');
+      if (label) label.textContent = `${toBn(count)}/১৬ টি ওষুধ`;
+    }
+
+    // ITEM 5: MEDICINE PICKER MODAL FROM SAVED LIBRARY
+    function openMedicinePickerModal() {
+      renderMedicinePickerList();
+      document.getElementById('medicinePickerModal').classList.remove('hidden');
+    }
+
+    function closeMedicinePickerModal() {
+      document.getElementById('medicinePickerModal').classList.add('hidden');
+    }
+
+    function renderMedicinePickerList() {
+      const container = document.getElementById('medicinePickerContainer');
+      const search = (document.getElementById('medPickerSearchInput').value || '').trim().toLowerCase();
+      container.innerHTML = '';
+
+      const list = (appDb.medicinesLibrary || []).filter(m => {
+        if (!search) return true;
+        return (m.brand || '').toLowerCase().includes(search) || (m.generic || '').toLowerCase().includes(search);
+      });
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="p-3 text-center text-slate-400">কোনো ঔষধ পাওয়া যায়নি</div>';
+        return;
+      }
+
+      list.forEach((m) => {
+        const div = document.createElement('div');
+        div.className = "p-2 flex justify-between items-center hover:bg-sky-50 transition";
+        div.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-900">${esc(m.brand)}</span> <span class="text-slate-500 italic text-[11px]">${esc(m.generic)}</span>
+            <div class="text-[10.5px] text-sky-800 font-medium">${esc(m.dose)} • ${esc(m.duration)}</div>
+          </div>
+          <button onclick="insertMedicineFromPicker('${escapeQuotes(m.brand)}', '${escapeQuotes(m.generic)}', '${escapeQuotes(m.dose)}', '${escapeQuotes(m.duration)}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded text-xs shrink-0">
+            + যুক্ত করুন
+          </button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function insertMedicineFromPicker(brand, generic, dose, duration) {
+      pushPrescriptionState();
+      const container = document.getElementById('medicineContainer');
+      container.appendChild(createMedicineRowElement(brand, generic, dose, duration));
+      adjustColumnLayout();
+      updateCapacityBadge();
+      saveAutoSnapshot();
+      toast(`"${brand}" যুক্ত হয়েছে`);
+    }
+
+    // ITEM 6: ADVICE PICKER MODAL (WITH CHECKLIST & PERSISTENCE)
+    function openAdvicePickerModal() {
+      renderAdvicePickerChecklist();
+      document.getElementById('advicePickerModal').classList.remove('hidden');
+    }
+
+    function closeAdvicePickerModal() {
+      document.getElementById('advicePickerModal').classList.add('hidden');
+    }
+
+    function renderAdvicePickerChecklist() {
+      const container = document.getElementById('adviceChecklistContainer');
+      container.innerHTML = '';
+      const list = (appDb.sectionPresets && appDb.sectionPresets.advice) || DEFAULT_SECTION_PRESETS.advice;
+
+      // Collect currently active advice in prescription
+      const currentAdvices = Array.from(document.querySelectorAll('#adviceList li span')).map(s => s.innerText.trim());
+
+      list.forEach((item, idx) => {
+        const isChecked = currentAdvices.includes(item.text) || (currentAdvices.length === 0 && item.defaultChecked);
+        const div = document.createElement('div');
+        div.className = "flex items-start justify-between p-1.5 rounded hover:bg-white bg-slate-50 border border-slate-200";
+        div.innerHTML = `
+          <label class="flex items-start gap-2 cursor-pointer flex-1">
+            <input type="checkbox" value="${idx}" ${isChecked ? 'checked' : ''} class="advice-checkbox mt-0.5 cursor-pointer text-teal-600 rounded">
+            <span class="text-slate-800 text-xs">${esc(item.text)}</span>
+          </label>
+          <button onclick="deleteAdviceFromLibrary(${idx})" class="text-slate-300 hover:text-rose-600 ml-2 p-0.5"><i class="fa-solid fa-trash"></i></button>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function applySelectedAdviceToPrescription() {
+      pushPrescriptionState();
+      const list = (appDb.sectionPresets && appDb.sectionPresets.advice) || DEFAULT_SECTION_PRESETS.advice;
+      const checkboxes = document.querySelectorAll('.advice-checkbox:checked');
+      const ul = document.getElementById('adviceList');
+      ul.innerHTML = '';
+
+      checkboxes.forEach(cb => {
+        const item = list[parseInt(cb.value, 10)];
+        if (item) {
+          const li = document.createElement('li');
+          li.className = "group";
+          li.innerHTML = `
+            <span contenteditable="true" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()">${esc(item.text)}</span>
+            <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+          `;
+          ul.appendChild(li);
+        }
+      });
+
+      saveAutoSnapshot();
+      closeAdvicePickerModal();
+      toast('নির্বাচিত পরামর্শ যুক্ত হয়েছে');
+    }
+
+    function addNewAdviceToLibraryFromPicker() {
+      const input = document.getElementById('newAdviceLibInput');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!appDb.sectionPresets.advice) appDb.sectionPresets.advice = [];
+      appDb.sectionPresets.advice.unshift({ text: val, defaultChecked: true });
+      input.value = '';
+      saveDb();
+      renderAdvicePickerChecklist();
+      toast('নতুন পরামর্শ লাইব্রেরিতে সংরক্ষিত হয়েছে');
+    }
+
+    function deleteAdviceFromLibrary(idx) {
+      if (confirm('এই পরামর্শটি মুছে ফেলতে চান?')) {
+        appDb.sectionPresets.advice.splice(idx, 1);
+        saveDb();
+        renderAdvicePickerChecklist();
+      }
+    }
+
+    // Clean Advice Add (without junk text!)
+    function addCleanAdviceItem() {
+      pushPrescriptionState();
+      const ul = document.getElementById('adviceList');
+      const li = document.createElement('li');
+      li.className = "group";
+      li.innerHTML = `
+        <span contenteditable="true" data-ph="পরামর্শ লিখুন..." onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()"></span>
+        <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      ul.appendChild(li);
+      const span = li.querySelector('span');
+      if (span) span.focus();
+    }
+
+    function addAdviceItem() {
+      addCleanAdviceItem();
+    }
+
+    // DOSE CHIPS & ADVICE CHIPS
+    function insertDoseChip(doseText) {
+      if (activeInputTarget && activeInputTarget.isConnected && activeInputTarget.classList.contains('med-dose-field')) {
+        pushPrescriptionState();
+        activeInputTarget.innerText = doseText;
+        saveAutoSnapshot();
+        closeToolsDrawer();
+        toast('ডোজ যুক্ত হয়েছে');
+      } else {
+        const fields = [];
+        if (fields.length > 0) {
+          pushPrescriptionState();
+          fields[fields.length - 1].innerText = doseText;
+          saveAutoSnapshot();
+          closeToolsDrawer();
+          toast('সর্বশেষ ওষুধের ডোজ আপডেট হয়েছে');
+        } else {
+          toast('আগে একটি ওষুধের ডোজ বক্সে ক্লিক করুন');
+        }
+      }
+    }
+
+    function insertAdviceChip(adviceText) {
+      pushPrescriptionState();
+      const ul = document.getElementById('adviceList');
+      const li = document.createElement('li');
+      li.className = "group";
+      li.innerHTML = `
+        <span contenteditable="true" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()">${esc(adviceText)}</span>
+        <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      ul.appendChild(li);
+      saveAutoSnapshot();
+      closeToolsDrawer();
+      toast('পরামর্শ যুক্ত হয়েছে');
+    }
+
+    function addFollowUpAdvice(days) {
+      pushPrescriptionState();
+      const d = new Date(Date.now() + days * 86400000);
+      const s = toBn(`${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`);
+      const lbl = days === 30 ? '১ মাস' : toBn(days) + ' দিন';
+
+      document.querySelectorAll('#adviceList li[data-followup]').forEach(el => el.remove());
+
+      const ul = document.getElementById('adviceList');
+      const li = document.createElement('li');
+      li.dataset.followup = "1";
+      li.className = "group text-emerald-800 font-semibold";
+      li.innerHTML = `
+        <span contenteditable="true" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()">পরবর্তী সাক্ষাতের সম্ভাব্য তারিখ: ${s} (${lbl} পর রিপোর্ট সহ আসবেন)।</span>
+        <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+      `;
+      ul.appendChild(li);
+      saveAutoSnapshot();
+      closeToolsDrawer();
+      toast('ফলো-আপ তারিখ যুক্ত হয়েছে');
+    }
+
+    // ACCURATE BMI CALCULATION
+    function calculateBMI() {
+      const wEl = document.getElementById('vitalWeight');
+      const hEl = document.getElementById('vitalHeight');
+      const bEl = document.getElementById('vitalBMI');
+      if (!wEl || !hEl || !bEl) return;
+
+      const wRaw = toEn(wEl.innerText).trim();
+      const hRaw = toEn(hEl.innerText).trim();
+
+      let weightKg = parseFloat(wRaw.replace(/[^0-9.]/g, '')) || 0;
+      if (wRaw.toLowerCase().includes('lb') || wRaw.toLowerCase().includes('pound')) {
+        weightKg = weightKg * 0.453592;
+      }
+
+      let heightM = 0;
+      const ft = hRaw.match(/(\d+(?:\.\d+)?)\s*(?:ft|feet|foot|'|’|′)\s*(\d+(?:\.\d+)?)?/i);
+      const num = parseFloat(hRaw.replace(/[^0-9.]/g, '')) || 0;
+      if (ft) heightM = ((parseFloat(ft[1]) * 12) + (parseFloat(ft[2]) || 0)) * 0.0254;
+      else if (/m\b/i.test(hRaw) && !/cm/i.test(hRaw) && num < 3) heightM = num;
+      else if (/in/i.test(hRaw)) heightM = num * 0.0254;
+      else if (num >= 100) heightM = num / 100;
+      else if (num >= 30) heightM = num * 0.0254;
+      else if (num >= 3) heightM = num * 0.3048;
+      else heightM = num;
+
+      if (weightKg > 10 && heightM > 0.5) {
+        const bmi = Number((weightKg / (heightM * heightM)).toFixed(1));
+        let category = "Normal";
+        let colorClass = "text-sky-800";
+        if (bmi < 18.5) { category = "Underweight"; colorClass = "text-amber-700"; }
+        else if (bmi >= 25 && bmi < 30) { category = "Overweight"; colorClass = "text-orange-700"; }
+        else if (bmi >= 30) { category = "Obese"; colorClass = "text-rose-700"; }
+        
+        bEl.className = `font-bold ${colorClass}`;
+        bEl.innerText = `${toBn(bmi.toFixed(1))} (${category})`;
+      } else {
+        bEl.className = "font-bold text-sky-800";
+        bEl.innerText = "—";
+      }
+    }
+
+    function recalculateBMI() {
+      calculateBMI();
+      toast('BMI পুনরায় হিসাব করা হয়েছে');
+    }
+
+    // MULTI-CHAMBER & ACTIVE CHAMBER ENGINE
+    function populateChamberSelectors() {
+      const select = document.getElementById('activeChamberSelect');
+      if (!select) return;
+      select.innerHTML = '';
+      (appDb.chambers || []).forEach(ch => {
+        const opt = document.createElement('option');
+        opt.value = ch.id;
+        opt.textContent = ch.name;
+        if (ch.id === appDb.activeChamberId) opt.selected = true;
+        select.appendChild(opt);
+      });
+      const optAll = document.createElement('option');
+      optAll.value = "all";
+      optAll.textContent = "সকল চেম্বার একসাথে দেখান";
+      if (appDb.activeChamberId === "all") optAll.selected = true;
+      select.appendChild(optAll);
+
+      renderActiveChamberDisplay();
+    }
+
+    function switchActiveChamber(chamberId) {
+      appDb.activeChamberId = chamberId;
+      saveDb(); saveAutoSnapshot();
+      renderActiveChamberDisplay();
+      toast('সক্রিয় চেম্বার পরিবর্তন হয়েছে');
+    }
+
+    function renderActiveChamberDisplay() {
+      const box = document.getElementById('activeChamberDisplayBox');
+      if (!box) return;
+
+      if (appDb.activeChamberId === "all") {
+        box.innerHTML = `
+          <div class="footer-contact-box grid grid-cols-1 md:grid-cols-2 gap-2 text-[9px] md:text-[9.5px]">
+            ${appDb.chambers.map((ch, idx) => `
+              <div class="border-b md:border-b-0 md:border-r border-slate-300 last:border-none pr-1 pb-1 md:pb-0">
+                <h6 class="font-bold text-slate-900">${toBn(idx+1)}. ${esc(ch.name)}</h6>
+                <p class="text-slate-600">${esc(ch.address)}</p>
+                <p class="font-semibold text-rose-700">${esc(ch.serial)} • ${esc(ch.timing)}</p>
+                <p class="text-[8px] text-slate-500">হটলাইন: ${esc(ch.hotline)}</p>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        const ch = (appDb.chambers || []).find(c => c.id === appDb.activeChamberId) || appDb.chambers[0];
+        if (!ch) return;
+        box.innerHTML = `
+          <div class="footer-contact-box flex items-center justify-between text-[9px] md:text-[9.5px] leading-tight gap-1 flex-wrap md:flex-nowrap">
+            <div class="text-left">
+              <h6 class="font-bold text-slate-900">${esc(ch.name)}</h6>
+              <p class="text-slate-600">${esc(ch.address)}</p>
+              <p class="text-slate-700 font-medium">${esc(ch.serial)}</p>
+            </div>
+
+            <div class="text-center px-2 py-0.5 bg-rose-600 text-white rounded shadow-sm my-0.5 md:my-0">
+              <p class="font-bold text-[9px] leading-none">${esc(ch.timing)}</p>
+              <p class="text-[7.5px] text-rose-100 mt-0.5 leading-none">হটলাইন: ${esc(ch.hotline)}</p>
+            </div>
+
+            <div class="text-right">
+              <p class="font-bold text-slate-900">জরুরি হটলাইন: ${esc(ch.hotline)}</p>
+              <p class="text-slate-600">${ch.email ? 'ইমেইল: ' + esc(ch.email) : ''}</p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // DOCTOR PROFILE PERSISTENCE (10 BANGLA + 10 ENGLISH INPUT FIELDS)
+    function openDoctorProfileModal() {
+      window._chBk = JSON.stringify(appDb.chambers);
+      const bn = (appDb.doctorLines && appDb.doctorLines.bn) || {};
+      const en = (appDb.doctorLines && appDb.doctorLines.en) || {};
+
+      for (let i = 1; i <= 10; i++) {
+        const elBn = document.getElementById('cfgBnLine' + i);
+        if (elBn) elBn.value = bn['line' + i] || '';
+
+        const elEn = document.getElementById('cfgEnLine' + i);
+        if (elEn) elEn.value = en['line' + i] || '';
+      }
+      renderChamberConfigRows();
+      document.getElementById('doctorProfileModal').classList.remove('hidden');
+    }
+
+    function closeDoctorProfileModal() {
+      if (window._chBk) { appDb.chambers = JSON.parse(window._chBk); window._chBk = null; populateChamberSelectors(); }
+      document.getElementById('doctorProfileModal').classList.add('hidden');
+    }
+
+    function renderChamberConfigRows() {
+      const c = document.getElementById('chamberConfigContainer');
+      c.innerHTML = '';
+      (appDb.chambers || []).forEach((ch, idx) => {
+        const div = document.createElement('div');
+        div.className = "bg-white p-2 rounded border border-slate-300 relative group";
+        div.innerHTML = `
+          <div class="flex justify-between items-center mb-1">
+            <span class="font-bold text-sky-900 text-xs">চেম্বার #${toBn(idx + 1)}</span>
+            ${appDb.chambers.length > 1 ? `<button onclick="deleteChamberConfigRow(${idx})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i> মুছুন</button>` : ''}
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-xs">
+            <input type="text" value="${esc(ch.name)}" oninput="updateChamberField(${idx}, 'name', this.value)" placeholder="চেম্বারের নাম" class="border rounded p-1">
+            <input type="text" value="${esc(ch.address)}" oninput="updateChamberField(${idx}, 'address', this.value)" placeholder="ঠিকানা" class="border rounded p-1">
+            <input type="text" value="${esc(ch.serial)}" oninput="updateChamberField(${idx}, 'serial', this.value)" placeholder="সিরিয়াল নম্বর" class="border rounded p-1">
+            <input type="text" value="${esc(ch.timing)}" oninput="updateChamberField(${idx}, 'timing', this.value)" placeholder="রোগী দেখার সময়" class="border rounded p-1">
+            <input type="text" value="${esc(ch.hotline)}" oninput="updateChamberField(${idx}, 'hotline', this.value)" placeholder="হটলাইন নম্বর" class="border rounded p-1">
+            <input type="text" value="${esc(ch.email)}" oninput="updateChamberField(${idx}, 'email', this.value)" placeholder="ইমেইল (ঐচ্ছিক)" class="border rounded p-1">
+          </div>
+        `;
+        c.appendChild(div);
+      });
+    }
+
+    function updateChamberField(idx, field, val) {
+      if (appDb.chambers[idx]) appDb.chambers[idx][field] = val;
+    }
+
+    function addNewChamberConfigRow() {
+      appDb.chambers.push({
+        id: "ch_" + Date.now(),
+        name: "নতুন চেম্বার",
+        address: "চেম্বারের ঠিকানা",
+        serial: "সিরিয়াল: ০১৭১১-০০০০০০",
+        timing: "বিকাল ৫টা - রাত ৯টা",
+        hotline: "০১৭১১-০০০০০০",
+        email: "chamber@mail.com"
+      });
+      renderChamberConfigRows();
+    }
+
+    function deleteChamberConfigRow(idx) {
+      if (confirm('এই চেম্বারটি মুছে ফেলতে চান?')) {
+        appDb.chambers.splice(idx, 1);
+        if (appDb.activeChamberId && !appDb.chambers.find(c => c.id === appDb.activeChamberId)) {
+          appDb.activeChamberId = appDb.chambers[0] ? appDb.chambers[0].id : "all";
+        }
+        renderChamberConfigRows();
+      }
+    }
+
+    function saveDoctorProfileModal() {
+      appDb.doctorLines = { bn: {}, en: {} };
+
+      for (let i = 1; i <= 10; i++) {
+        const elBn = document.getElementById('cfgBnLine' + i);
+        if (elBn) appDb.doctorLines.bn['line' + i] = elBn.value.trim();
+
+        const elEn = document.getElementById('cfgEnLine' + i);
+        if (elEn) appDb.doctorLines.en['line' + i] = elEn.value.trim();
+      }
+
+      saveDb();
+      applyDoctorProfileToDOM();
+      populateChamberSelectors();
+      window._chBk = null;
+      saveAutoSnapshot();
+      closeDoctorProfileModal();
+      toast('২০টি তথ্য ফিল্ড ও চেম্বার তথ্য সফলভাবে সংরক্ষিত হয়েছে!');
+    }
+
+    function applyDoctorProfileToDOM() {
+      const bnBox = document.getElementById('headerBnDocBox');
+      const enBox = document.getElementById('headerEnDocBox');
+      if (!bnBox || !enBox) return;
+
+      const bn = (appDb.doctorLines && appDb.doctorLines.bn) || {};
+      const en = (appDb.doctorLines && appDb.doctorLines.en) || {};
+
+      // Dynamic rendering of 10 Bangla lines
+      let bnHtml = '';
+      for (let i = 1; i <= 10; i++) {
+        const text = bn['line' + i] || '';
+        if (text) {
+          if (i === 1) bnHtml += `<h4 contenteditable="true" id="docBnLine1" onblur="saveAutoSnapshot()" class="text-[10px] md:text-[11px] font-bold text-rose-600 leading-tight">${esc(text)}</h4>`;
+          else if (i === 2) bnHtml += `<h2 contenteditable="true" id="docBnLine2" onblur="saveAutoSnapshot()" class="text-base md:text-lg font-black text-slate-900 leading-tight">${esc(text)}</h2>`;
+          else if (i === 3 || i === 4) bnHtml += `<p contenteditable="true" id="docBnLine${i}" onblur="saveAutoSnapshot()" class="text-[9.5px] md:text-[10px] text-slate-700 leading-tight">${esc(text)}</p>`;
+          else if (i === 5 || i === 6) bnHtml += `<p contenteditable="true" id="docBnLine${i}" onblur="saveAutoSnapshot()" class="text-[9.5px] md:text-[10px] font-semibold text-slate-800 leading-tight">${esc(text)}</p>`;
+          else bnHtml += `<p contenteditable="true" id="docBnLine${i}" onblur="saveAutoSnapshot()" class="text-[8.5px] md:text-[9px] font-bold text-slate-800 leading-tight">${esc(text)}</p>`;
+        }
+      }
+      bnBox.innerHTML = bnHtml || '<h2 contenteditable="true" class="text-base font-bold">ডাঃ নাম লিখুন</h2>';
+
+      // Dynamic rendering of 10 English lines
+      let enHtml = '';
+      for (let i = 1; i <= 10; i++) {
+        const text = en['line' + i] || '';
+        if (text) {
+          if (i === 1) enHtml += `<h4 contenteditable="true" id="docEnLine1" onblur="saveAutoSnapshot()" class="text-[10px] md:text-[11px] font-bold text-rose-600 leading-tight uppercase">${esc(text)}</h4>`;
+          else if (i === 2) enHtml += `<h2 contenteditable="true" id="docEnLine2" onblur="saveAutoSnapshot()" class="text-base md:text-lg font-bold text-slate-900 leading-tight">${esc(text)}</h2>`;
+          else if (i === 3 || i === 4) enHtml += `<p contenteditable="true" id="docEnLine${i}" onblur="saveAutoSnapshot()" class="text-[9.5px] md:text-[10px] text-slate-700 leading-tight">${esc(text)}</p>`;
+          else if (i === 5 || i === 6) enHtml += `<p contenteditable="true" id="docEnLine${i}" onblur="saveAutoSnapshot()" class="text-[9.5px] md:text-[10px] font-semibold text-slate-800 leading-tight">${esc(text)}</p>`;
+          else enHtml += `<p contenteditable="true" id="docEnLine${i}" onblur="saveAutoSnapshot()" class="text-[8.5px] md:text-[9px] font-bold text-slate-800 leading-tight">${esc(text)}</p>`;
+        }
+      }
+      enBox.innerHTML = enHtml || '<h2 contenteditable="true" class="text-base font-bold">Doctor Name</h2>';
+    }
+
+    // FULL SETTINGS MODAL & DATABASE TABS
+    function openSettingsModal() {
+      renderSettingsDatabaseUI();
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function switchSettingsTab(tabId) {
+      document.querySelectorAll('.settings-content').forEach(c => c.classList.add('hidden'));
+      document.querySelectorAll('.set-tab-btn').forEach(b => {
+        b.classList.remove('border-sky-600', 'text-sky-700', 'active');
+        b.classList.add('border-transparent', 'text-slate-600');
+      });
+      const target = document.getElementById(tabId);
+      if (target) target.classList.remove('hidden');
+      const activeBtn = document.getElementById('tabBtn' + tabId.replace('tab', ''));
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-slate-600');
+        activeBtn.classList.add('border-sky-600', 'text-sky-700', 'active');
+      }
+    }
+
+    function renderSettingsDatabaseUI() {
+      const medList = document.getElementById('libMedicineList');
+      if (medList) {
+        medList.innerHTML = (appDb.medicinesLibrary || []).map((m, idx) => `
+          <div class="p-2 flex justify-between items-center hover:bg-slate-50">
+            <div>
+              <strong class="text-slate-900">${esc(m.brand)}</strong> <span class="text-slate-500">${esc(m.generic)}</span>
+              <div class="text-[11px] text-sky-800">${esc(m.dose)} • ${esc(m.duration)}</div>
+            </div>
+            <button onclick="editLibMedicine(${idx})" class="text-sky-600 p-1"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="deleteLibMedicine(${idx})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `).join('');
+      }
+
+      renderSimpleSettingsList('complaints', 'libComplaintList');
+      renderSimpleSettingsList('diagnosis', 'libDiagList');
+      renderSimpleSettingsList('investigations', 'libInvList');
+      renderMore(); fillTopNoteUI();
+
+      // ITEM 8: Render Templates with direct "লোড / আবেদন" button!
+      const tmplList = document.getElementById('libTemplateList');
+      if (tmplList) {
+        tmplList.innerHTML = (appDb.templates || []).map((t, idx) => `
+          <div class="p-2.5 flex justify-between items-center hover:bg-slate-50">
+            <div>
+              <span class="font-bold text-slate-900 text-sm">${esc(t.name)}</span>
+              <div class="text-[11px] text-slate-500">${(t.medicines || []).length} টি ঔষধ সংরক্ষিত</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="applySelectedTemplate('${t.id}');closeSettingsModal();" class="bg-sky-600 hover:bg-sky-700 text-white font-bold px-2.5 py-1 rounded text-xs">
+                লোড করুন
+              </button>
+              <button onclick="renameLibTemplate(${idx})" class="text-sky-600 p-1"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteLibTemplate(${idx})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderSimpleSettingsList(key, containerId) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = ((appDb.sectionPresets && appDb.sectionPresets[key]) || []).map((item, idx) => `
+        <div class="p-2 flex justify-between items-center hover:bg-slate-50 gap-2">
+          <span class="text-slate-800 flex-1">${esc(item)}</span>
+          <button onclick="editSimpleLibItem('${key}', ${idx})" class="text-sky-600 p-1"><i class="fa-solid fa-pen"></i></button>
+          <button onclick="deleteSimpleLibItem('${key}', ${idx})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash"></i></button>
+        </div>`).join('');
+    }
+    function editSimpleLibItem(key, idx) {
+      const v = prompt('সম্পাদনা করুন:', appDb.sectionPresets[key][idx]);
+      if (v && v.trim()) { appDb.sectionPresets[key][idx] = v.trim(); saveDb(); renderSettingsDatabaseUI(); }
+    }
+    function editLibMedicine(idx) {
+      const m = appDb.medicinesLibrary[idx];
+      const v = prompt('ব্র্যান্ড | (জেনেরিক) | সেবনবিধি | মেয়াদ', [m.brand, m.generic, m.dose, m.duration].join(' | '));
+      if (!v) return;
+      const p = v.split('|').map(s => s.trim());
+      appDb.medicinesLibrary[idx] = { brand: p[0] || m.brand, generic: p[1] || '', dose: p[2] || '', duration: p[3] || '' };
+      saveDb(); renderSettingsDatabaseUI();
+    }
+    function renameLibTemplate(idx) {
+      const v = prompt('টেমপ্লেটের নাম:', appDb.templates[idx].name);
+      if (v && v.trim()) { appDb.templates[idx].name = v.trim(); saveDb(); renderSettingsDatabaseUI(); populateTemplateDropdown(); }
+    }
+    // --- অন্যান্য প্রিসেট ম্যানেজার ---
+    const PRESET_CATS = { vital_bp:'BP', vital_pulse:'Pulse', vital_weight:'Weight', vital_height:'Height', vital_spo2:'SpO2', vital_temp:'Temp', vital_rbs:'RBS', complaints:'Chief Complaints', history:'History', diagnosis:'Diagnosis', investigations:'Investigations', referred:'Referred To', notes:'Special Notes', advice:'পরামর্শ (Advice)' };
+    function renderMore() {
+      const sel = document.getElementById('moreCat');
+      if (!sel) return;
+      if (!sel.options.length) sel.innerHTML = Object.entries(PRESET_CATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+      const k = sel.value;
+      const L = (appDb.sectionPresets[k] = appDb.sectionPresets[k] || []);
+      document.getElementById('moreList').innerHTML = L.map((it, i) => {
+        const adv = k === 'advice';
+        return `<div class="p-2 flex items-center gap-2"><span class="flex-1">${esc(adv ? it.text : it)}${adv && it.defaultChecked ? ' <b class="text-emerald-700">(ডিফল্ট)</b>' : ''}</span>${adv ? `<button onclick="moreToggle(${i})" class="text-emerald-700 p-1" title="ডিফল্ট চালু/বন্ধ"><i class="fa-solid fa-check"></i></button>` : ''}<button onclick="moreEdit(${i})" class="text-sky-600 p-1"><i class="fa-solid fa-pen"></i></button><button onclick="moreDel(${i})" class="text-rose-500 p-1"><i class="fa-solid fa-trash"></i></button></div>`;
+      }).join('') || '<div class="p-3 text-center text-slate-400">তালিকা খালি</div>';
+    }
+    function moreAdd() {
+      const k = document.getElementById('moreCat').value, inp = document.getElementById('moreInput'), v = inp.value.trim();
+      if (!v) return;
+      appDb.sectionPresets[k].unshift(k === 'advice' ? { text: v, defaultChecked: false } : v);
+      inp.value = ''; saveDb(); renderMore(); toast('যুক্ত হয়েছে');
+    }
+    function moreEdit(i) {
+      const k = document.getElementById('moreCat').value, it = appDb.sectionPresets[k][i];
+      const v = prompt('সম্পাদনা করুন:', k === 'advice' ? it.text : it);
+      if (!v || !v.trim()) return;
+      if (k === 'advice') it.text = v.trim(); else appDb.sectionPresets[k][i] = v.trim();
+      saveDb(); renderMore();
+    }
+    function moreDel(i) {
+      if (!confirm('মুছে ফেলতে চান?')) return;
+      appDb.sectionPresets[document.getElementById('moreCat').value].splice(i, 1);
+      saveDb(); renderMore();
+    }
+    function moreToggle(i) { const it = appDb.sectionPresets.advice[i]; it.defaultChecked = !it.defaultChecked; saveDb(); renderMore(); }
+    // --- টপ নোট ---
+    function topCfg() { return appDb.topNote = appDb.topNote || { show: true, size: 10, color: '#64748b', align: 'center', decor: 'none', bold: false, italic: false }; }
+    function applyTopNoteCfg() {
+      const c = topCfg(), bar = document.querySelector('.top-banner-bar'), s = document.getElementById('topSpecialNote');
+      if (!bar || !s) return;
+      bar.style.display = c.show ? '' : 'none';
+      bar.style.justifyContent = c.align;
+      bar.dataset.decor = c.decor;
+      s.style.fontSize = c.size + 'px'; s.style.color = c.color;
+      s.style.fontWeight = c.bold ? '700' : ''; s.style.fontStyle = c.italic ? 'italic' : '';
+    }
+    function fillTopNoteUI() {
+      const c = topCfg(), g = id => document.getElementById(id);
+      if (!g('tnShow')) return;
+      g('tnShow').checked = c.show; g('tnSize').value = String(c.size); g('tnAlign').value = c.align; g('tnDecor').value = c.decor;
+      g('tnColor').value = c.color; g('tnBold').checked = c.bold; g('tnItalic').checked = c.italic;
+      g('tnText').value = (document.getElementById('topSpecialNote').innerText || '').trim();
+    }
+    function saveTopNoteCfg() {
+      const c = topCfg(), g = id => document.getElementById(id);
+      c.show = g('tnShow').checked; c.size = +g('tnSize').value; c.align = g('tnAlign').value; c.decor = g('tnDecor').value;
+      c.color = g('tnColor').value; c.bold = g('tnBold').checked; c.italic = g('tnItalic').checked;
+      document.getElementById('topSpecialNote').innerText = g('tnText').value;
+      saveDb(); applyTopNoteCfg(); saveAutoSnapshot();
+    }
+
+    function addMedicineToLibrary() {
+      const input = document.getElementById('newMedLibInput');
+      const val = input.value.trim();
+      if (!val) return;
+      const parts = val.split('|');
+      appDb.medicinesLibrary.unshift({
+        brand: parts[0] ? parts[0].trim() : "New Med",
+        generic: parts[1] ? parts[1].trim() : "",
+        dose: parts[2] ? parts[2].trim() : "১+০+১ খাবার পর",
+        duration: parts[3] ? parts[3].trim() : "৭ দিন"
+      });
+      input.value = '';
+      saveDb();
+      renderSettingsDatabaseUI();
+      toast('ঔষধ লাইব্রেরিতে যুক্ত হয়েছে');
+    }
+
+    function deleteLibMedicine(idx) {
+      if (confirm('এই ঔষধটি মুছে ফেলতে চান?')) {
+        appDb.medicinesLibrary.splice(idx, 1);
+        saveDb();
+        renderSettingsDatabaseUI();
+      }
+    }
+
+    function addSimpleItemToLib(key, inputId) {
+      const input = document.getElementById(inputId);
+      const val = input.value.trim();
+      if (!val) return;
+      appDb.sectionPresets[key] = appDb.sectionPresets[key] || [];
+      appDb.sectionPresets[key].unshift(val);
+      input.value = '';
+      saveDb();
+      renderSettingsDatabaseUI();
+      toast('যুক্ত হয়েছে');
+    }
+
+    function deleteSimpleLibItem(key, idx) {
+      if (confirm('তালিকা থেকে মুছে ফেলতে চান?')) {
+        appDb.sectionPresets[key].splice(idx, 1);
+        saveDb();
+        renderSettingsDatabaseUI();
+      }
+    }
+
+    function deleteLibTemplate(idx) {
+      if (confirm('টেমপ্লেটটি মুছে ফেলতে চান?')) {
+        appDb.templates.splice(idx, 1);
+        saveDb();
+        renderSettingsDatabaseUI();
+        populateTemplateDropdown();
+      }
+    }
+
+    function resetDefaultLibraries() {
+      if (confirm('ডিফল্ট ওষুধ ও টেস্ট লাইব্রেরিতে রিসেট করবেন?')) {
+        appDb.medicinesLibrary = JSON.parse(JSON.stringify(DEFAULT_DGDA_MEDICINES));
+        saveDb();
+        renderSettingsDatabaseUI();
+        toast('ডিফল্ট লাইব্রেরি রিস্টোর হয়েছে');
+      }
+    }
+
+    // ITEM 8: TEMPLATES MANAGEMENT & BUG FIX
+    function populateTemplateDropdown() {
+      const sel = document.getElementById('drawerTemplateSelect');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">টেমপ্লেট বাছুন...</option>';
+      (appDb.templates || []).forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.name;
+        sel.appendChild(opt);
+      });
+    }
+
+    function applySelectedTemplate(tId) {
+      if (!tId) return;
+      const t = (appDb.templates || []).find(item => String(item.id) === String(tId));
+      if (!t) {
+        toast('টেমপ্লেট পাওয়া যায়নি');
+        return;
+      }
+      pushPrescriptionState();
+      renderMedicineList(t.medicines || []);
+      closeToolsDrawer();
+      toast(`"${t.name}" টেমপ্লেট সফলভাবে লোড হয়েছে!`);
+    }
+
+    function saveCurrentAsTemplate() {
+      const name = prompt('বর্তমান ওষুধের তালিকা দিয়ে নতুন টেমপ্লেটের নাম দিন (যেমন: "উচ্চ রক্তচাপ ও হৃদরোগ"):');
+      if (!name) return;
+      const meds = Array.from(document.querySelectorAll('.med-row')).map(r => {
+        const edits = r.querySelectorAll('[contenteditable="true"]');
+        return {
+          brand: edits[0] ? edits[0].innerText.trim() : '',
+          generic: edits[1] ? edits[1].innerText.trim() : '',
+          dose: edits[2] ? edits[2].innerText.trim() : '',
+          duration: edits[3] ? edits[3].innerText.trim() : ''
+        };
+      }).filter(m => m.brand);
+
+      if (meds.length === 0) {
+        alert('প্রেসক্রিপশনে অন্তত একটি ওষুধ থাকতে হবে!');
+        return;
+      }
+
+      appDb.templates = appDb.templates || [];
+      appDb.templates.push({ id: 'tmpl_' + Date.now(), name, medicines: meds });
+      saveDb();
+      populateTemplateDropdown();
+      renderSettingsDatabaseUI();
+      toast(`"${name}" টেমপ্লেট সফলভাবে সংরক্ষিত হয়েছে`);
+    }
+
+    // LOGO & DIGITAL SIGNATURE
+    function triggerLogoUpload() { document.getElementById('logoInput').click(); }
+    function triggerSigUpload() { document.getElementById('sigInput').click(); }
+
+    function handleLogoChange(e) {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      processAndStoreImage(file, 240, (dataUrl) => {
+        try { localStorage.setItem('rx_logo_asset', dataUrl); } catch (e) { toast('ছবি সেভ করা যায়নি (জায়গা কম)'); return; }
+        renderLogoAndSignatureAssets();
+        toast('লোগো সফলভাবে সেভ হয়েছে');
+      });
+    }
+
+    function handleSigChange(e) {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      processAndStoreImage(file, 400, (dataUrl) => {
+        try { localStorage.setItem('rx_sig_asset', dataUrl); } catch (e) { toast('ছবি সেভ করা যায়নি (জায়গা কম)'); return; }
+        renderLogoAndSignatureAssets();
+        toast('স্বাক্ষর সফলভাবে সেভ হয়েছে');
+      });
+    }
+
+    function processAndStoreImage(file, maxW, cb) {
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxW / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          cb(canvas.toDataURL('image/png'));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderLogoAndSignatureAssets() {
+      const logo = localStorage.getItem('rx_logo_asset');
+      const sig = localStorage.getItem('rx_sig_asset');
+      const lEl = document.getElementById('logoContainer');
+      const sEl = document.getElementById('sigContainer');
+
+      if (lEl) {
+        lEl.innerHTML = logo ? `<img src="${logo}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-plus text-base md:text-lg"></i>`;
+      }
+      if (sEl) {
+        sEl.innerHTML = sig ? `<img src="${sig}" class="h-6 md:h-7 max-w-full object-contain">` : `<span class="font-serif italic text-sm md:text-base font-bold text-sky-950">Dr. Basunia</span>`;
+      }
+    }
+
+    function resetAsset(key) {
+      if (confirm(`আপনি কি এই ${key === 'logo' ? 'লোগো' : 'স্বাক্ষর'} রিসেট করতে চান?`)) {
+        localStorage.removeItem(key === 'logo' ? 'rx_logo_asset' : 'rx_sig_asset');
+        renderLogoAndSignatureAssets();
+        toast('রিসেট সম্পন্ন হয়েছে');
+      }
+    }
+
+    // 100% RELIABLE PRINT & PAD MODES ENGINE
+    let currentPadMode = 'normal';
+
+    function setPrintPadMode(mode) {
+      currentPadMode = mode;
+      document.body.classList.remove('mode-preprinted-pad', 'mode-blank-pad', 'mode-lab-slip');
+      
+      const sel = document.getElementById('selPadMode');
+      if (sel && sel.value !== mode) sel.value = mode;
+
+      if (mode === 'preprinted') {
+        document.body.classList.add('mode-preprinted-pad');
+        toast('প্রি-প্রিন্টেড মোড: হেডার ও ফুটার লুকানো হয়েছে');
+      } else if (mode === 'blank') {
+        document.body.classList.add('mode-blank-pad');
+        syncPatientBinds();
+        toast('ব্ল্যাঙ্ক প্যাড মোড: বডি লুকানো হয়েছে');
+      } else if (mode === 'labslip') {
+        document.body.classList.add('mode-lab-slip');
+        toast('ল্যাব স্লিপ মোড: ওষুধ লুকানো হয়েছে');
+      } else {
+        toast('স্বাভাবিক মোড: ফুল প্রেসক্রিপশন সক্রিয়');
+      }
+    }
+
+    function syncPatientBinds() {
+      const pName = document.getElementById('patientName');
+      const pAge = document.getElementById('patientAge');
+      document.querySelectorAll('.bind-name').forEach(el => el.textContent = pName ? pName.innerText.trim() : '...............');
+      document.querySelectorAll('.bind-age').forEach(el => el.textContent = pAge ? pAge.innerText.trim() : '....');
+    }
+
+    // OFFLINE QR CODE GENERATOR
+    function generateOfflineQR(codeText) {
+      const box = document.getElementById('prescriptionQrBox');
+      if (!box) return;
+
+      let hash = 0;
+      for (let i = 0; i < codeText.length; i++) {
+        hash = (hash * 31 + codeText.charCodeAt(i)) >>> 0;
+      }
+
+      const size = 7;
+      let rects = '';
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const bit = (hash >> ((r * size + c) % 31)) & 1;
+          const isCorner = (r < 2 && c < 2) || (r < 2 && c > 4) || (r > 4 && c < 2);
+          if (bit || isCorner) {
+            rects += `<rect x="${c * 5 + 3}" y="${r * 5 + 3}" width="4" height="4" fill="#0f172a"/>`;
+          }
+        }
+      }
+
+      box.innerHTML = `
+        <svg viewBox="0 0 42 42" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <rect width="42" height="42" fill="#ffffff"/>
+          <rect x="2" y="2" width="10" height="10" fill="none" stroke="#0f172a" stroke-width="2"/>
+          <rect x="4" y="4" width="6" height="6" fill="#0f172a"/>
+          <rect x="30" y="2" width="10" height="10" fill="none" stroke="#0f172a" stroke-width="2"/>
+          <rect x="32" y="4" width="6" height="6" fill="#0f172a"/>
+          <rect x="2" y="30" width="10" height="10" fill="none" stroke="#0f172a" stroke-width="2"/>
+          <rect x="4" y="32" width="6" height="6" fill="#0f172a"/>
+          ${rects}
+        </svg>
+      `;
+    }
+
+    function refreshDynamicElements() {
+      const pId = document.getElementById('patientId');
+      const rxCode = document.getElementById('rxCode');
+      const idVal = pId ? pId.innerText.trim() : '1001';
+      const code = `RX-${idVal}`;
+      if (rxCode) rxCode.innerText = code;
+      generateOfflineQR(code);
+      syncPatientBinds();
+    }
+
+    const ORIG_TITLE = document.title;
+    function resetFit() { const c = document.getElementById('prescriptionCanvas'); if (c) c.style.zoom = ''; }
+    function fitOnePage() {
+      const c = document.getElementById('prescriptionCanvas');
+      if (!c || document.documentElement.classList.contains('thermal-mode')) return;
+      c.style.zoom = '';
+      const W = 793.7, H = 1110, pw = c.style.width;
+      c.style.width = W + 'px';
+      const h = c.scrollHeight;
+      c.style.width = pw;
+      const z = Math.min(1, H / h);
+      if (z < 1) c.style.zoom = (Math.floor(z * 100) / 100).toString();
+    }
+    function calculatePrintFitZoom() { fitOnePage(); return 1; }
+
+    // LIVE FULLY EDITABLE PRINT PREVIEW MODAL (ITEM 7: WITH DIRECT PICKERS)
+    function openPrintPreviewModal() {
+      refreshDynamicElements();
+
+      const canvas = document.getElementById('prescriptionCanvas');
+      const host = document.getElementById('modalA4Container');
+      const modal = document.getElementById('printPreviewModal');
+      host.innerHTML = '';
+
+      const clone = canvas.cloneNode(true);
+      clone.id = 'previewEditableClone';
+      
+      clone.querySelectorAll('[contenteditable]').forEach(e => e.setAttribute('contenteditable', 'false'));
+      clone.querySelectorAll('[id]').forEach(e => e.removeAttribute('id'));
+      clone.querySelectorAll('.no-print').forEach(e => e.remove());
+      clone.style.cssText = `width:100%;height:auto;background:#ffffff;padding:4mm 7mm;display:flex;flex-direction:column;justify-content:space-between;min-height:250mm`;
+
+      host.style.cssText = `width:100%;max-width:210mm;margin:0 auto;background:#fff`;
+      host.appendChild(clone);
+
+      modal.classList.remove('hidden');
+    }
+
+    function closePrintPreviewModal() {
+      document.getElementById('printPreviewModal').classList.add('hidden');
+      document.getElementById('modalA4Container').innerHTML = '';
+      saveAutoSnapshot();
+    }
+
+    function confirmAndExecutePrint() {
+      savePatientRecordToDatabase('Completed', true);
+      closePrintPreviewModal();
+
+      const pName = (document.getElementById('patientName').innerText.trim() || 'Patient');
+      const pId = (document.getElementById('patientId').innerText.trim() || 'ID');
+      document.title = `Rx-${pName}-[${pId}]`;
+
+      setTimeout(() => {
+        window.print();
+      }, 80);
+    }
+
+    window.addEventListener('beforeprint', () => {
+      refreshDynamicElements();
+      fitOnePage();
+    });
+
+    window.addEventListener('afterprint', () => {
+      document.title = ORIG_TITLE; resetFit();
+      if (document.body.classList.contains('mode-lab-slip')) {
+        setPrintPadMode('normal');
+      }
+    });
+
+    // THERMAL 80MM PRINTER MODE
+    function toggleThermalMode(isThermal) {
+      document.documentElement.classList.toggle('thermal-mode', isThermal);
+      document.body.classList.toggle('thermal-mode', isThermal);
+      document.getElementById('dynPage').textContent = isThermal ? '@page{size:80mm auto;margin:0}' : '@page{size:portrait;margin:0mm}';
+    }
+
+    // NEW PATIENT WORKFLOW
+    function resetClinicalFields() {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+      ['patientName','patientAge','patientPhone','patientAddress','vitalBP','vitalPulse','vitalWeight','vitalHeight','vitalSpO2','vitalTemp','vitalRBS','refTargetText','notesTargetText'].forEach(i => set(i, ''));
+      setSexRadioUI('Male');
+      set('patientId', getNextPatientId());
+      set('rxDate', getTodayBnDate());
+      ['complaintsList','historyList','diagnosisList','investigationList'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = ''; });
+      const b = document.getElementById('vitalBMI');
+      if (b) { b.className = 'font-bold text-sky-800'; b.innerText = '—'; }
+      renderMedicineList([{}]);
+      const ul = document.getElementById('adviceList');
+      ul.innerHTML = '';
+      ((appDb.sectionPresets && appDb.sectionPresets.advice) || []).filter(a => a.defaultChecked).forEach(a => {
+        const li = document.createElement('li');
+        li.className = 'group';
+        li.innerHTML = `<span contenteditable="true" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()">${esc(a.text)}</span><button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>`;
+        ul.appendChild(li);
+      });
+    }
+
+    function newPatientPrompt() {
+      if (!confirm('নতুন রোগীর জন্য প্রেসক্রিপশন ক্লিয়ার করবেন? (নাম থাকলে বর্তমান রোগী সেভ হবে)')) return;
+      if (document.getElementById('patientName').innerText.trim()) savePatientRecordToDatabase('Completed', true);
+      else if (!confirm('রোগীর নাম নেই, তাই বর্তমান প্রেসক্রিপশন সেভ হবে না। তবুও মুছবেন?')) return;
+      pushPrescriptionState();
+      resetClinicalFields();
+      setPrintPadMode('normal');
+      refreshDynamicElements();
+      saveAutoSnapshot();
+      toast('নতুন রোগীর ফর্ম প্রস্তুত');
+    }
+
+    // AUTO-SAVE SNAPSHOT
+    let snapshotTimeout;
+    function saveAutoSnapshot() {
+      clearTimeout(snapshotTimeout);
+      snapshotTimeout = setTimeout(() => {
+        try {
+          const pName = document.getElementById('patientName');
+          if (!pName) return;
+          const canvas = document.getElementById('prescriptionCanvas');
+          if (!canvas) return;
+
+          refreshDynamicElements();
+          const data = {
+            id: document.getElementById('patientId').innerText.trim(),
+            name: pName.innerText.trim(),
+            age: document.getElementById('patientAge').innerText.trim(),
+            sex: currentPatientSex,
+            phone: document.getElementById('patientPhone').innerText.trim(),
+            address: document.getElementById('patientAddress').innerText.trim(),
+            date: document.getElementById('rxDate').innerText.trim(),
+            html: snapHtml(),
+            padMode: currentPadMode
+          };
+          localStorage.setItem('rx_live_snapshot_core_v10', JSON.stringify(data));
+          setStatus('অটো-সেভ ' + toBn(new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })));
+        } catch(e) {}
+      }, 400);
+    }
+
+    function restoreAutoSnapshot() {
+      try {
+        const raw = localStorage.getItem('rx_live_snapshot_core_v10');
+        if (!raw) return false;
+        const data = JSON.parse(raw);
+        if (!data || !data.html) return false;
+        const canvas = document.getElementById('prescriptionCanvas');
+        canvas.innerHTML = data.html;
+        applyDoctorProfileToDOM(); populateChamberSelectors(); applyTopNoteCfg();
+        if (data.padMode) setPrintPadMode(data.padMode);
+        if (data.sex) setSexRadioUI(data.sex);
+        renderLogoAndSignatureAssets();
+        adjustColumnLayout();
+        refreshDynamicElements();
+        return true;
+      } catch(e) { return false; }
+    }
+
+    // PATIENT DATABASE & STORAGE MANAGEMENT
+    function savePatientRecordToDatabase(status = 'Completed', silent = false) {
+      const pName = (document.getElementById('patientName').innerText.trim());
+      if (!pName) return false;
+
+      const pId = document.getElementById('patientId').innerText.trim() || getNextPatientId();
+      const pPhone = document.getElementById('patientPhone').innerText.trim();
+      const pAge = document.getElementById('patientAge').innerText.trim();
+      const pDate = document.getElementById('rxDate').innerText.trim();
+
+      const diagList = Array.from(document.querySelectorAll('#diagnosisList li span')).map(s => s.innerText.trim()).filter(Boolean).join(', ');
+      const invList = Array.from(document.querySelectorAll('#investigationList li span')).map(s => s.innerText.trim()).filter(Boolean).join(', ');
+
+      const record = {
+        id: pId,
+        name: pName,
+        phone: pPhone,
+        age: pAge,
+        sex: currentPatientSex,
+        date: pDate,
+        status: status,
+        diagnosis: diagList || invList || "Clinical Check",
+        timestamp: ((appDb.patients || []).find(p => p.id === pId) || {}).timestamp || Date.now(),
+        canvasHtml: snapHtml()
+      };
+
+      const existingIndex = (appDb.patients || []).findIndex(p => p.id === pId);
+      if (existingIndex >= 0) {
+        appDb.patients[existingIndex] = record;
+      } else {
+        appDb.patients.unshift(record);
+      }
+
+      appDb.patients.forEach((p, idx) => {
+        if (idx >= 35) delete p.canvasHtml;
+      });
+
+      saveDb();
+      renderPatientsTable();
+      calculateAnalytics();
+      if (!silent) toast('রোগীর তথ্য ডাটাবেজে সংরক্ষিত হয়েছে');
+      return true;
+    }
+
+    function renderPatientsTable() {
+      const tbody = document.getElementById('patientsTableBody');
+      if (!tbody) return;
+      const search = (document.getElementById('patientSearchInput').value || '').trim().toLowerCase();
+      tbody.innerHTML = '';
+
+      const filtered = (appDb.patients || []).filter(p => {
+        if (!search) return true;
+        return [p.name, p.phone, p.id, p.diagnosis, p.status].join(' ').toLowerCase().includes(search);
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="p-3 text-center text-slate-400">কোনো রোগীর রেকর্ড পাওয়া যায়নি</td></tr>`;
+        return;
+      }
+
+      filtered.forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50";
+        const isPending = p.status === 'Pending Test';
+        const badge = isPending 
+          ? `<span class="bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded text-[10px]">টেস্ট চলছে (Pending)</span>`
+          : `<span class="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded text-[10px]">সম্পূর্ণ (Done)</span>`;
+
+        tr.innerHTML = `
+          <td class="p-2 border-r text-slate-500">${p.date || toBn(new Date(p.timestamp).toLocaleDateString('bn-BD'))}</td>
+          <td class="p-2 border-r font-bold text-slate-900 cursor-pointer hover:underline" onclick="loadPatientFromHistory('${escapeQuotes(p.id)}')">${esc(p.name)}</td>
+          <td class="p-2 border-r font-mono">${esc(p.phone) || '—'}</td>
+          <td class="p-2 border-r font-mono font-bold">${esc(p.id)}</td>
+          <td class="p-2 border-r">${badge}</td>
+          <td class="p-2 border-r text-slate-700">${esc(p.diagnosis) || '—'}</td>
+          <td class="p-2 text-center whitespace-nowrap">
+            <button onclick="loadPatientFromHistory('${escapeQuotes(p.id)}')" class="text-sky-600 hover:text-sky-800 font-semibold mr-2">লোড</button>
+            <button onclick="deletePatientRecord('${escapeQuotes(p.id)}')" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function loadPatientFromHistory(pId) {
+      const p = (appDb.patients || []).find(item => item.id === pId);
+      if (!p) return;
+      pushPrescriptionState();
+
+      if (p.canvasHtml) {
+        document.getElementById('prescriptionCanvas').innerHTML = p.canvasHtml;
+        setSexRadioUI(p.sex);
+        renderLogoAndSignatureAssets();
+        adjustColumnLayout();
+        refreshDynamicElements();
+      } else {
+        resetClinicalFields();
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val || ''; };
+        set('patientName', p.name);
+        set('patientId', p.id);
+        set('patientAge', p.age);
+        setSexRadioUI(p.sex);
+        set('patientPhone', p.phone);
+        set('rxDate', getTodayBnDate());
+        refreshDynamicElements();
+      }
+
+      switchBottomTab('viewEditor', document.querySelector('.nav-tab'));
+      toast(`রোগী "${p.name}" এর প্রেসক্রিপশন লোড হয়েছে`);
+    }
+
+    function deletePatientRecord(pId) {
+      if (confirm('এই রোগীর রেকর্ডটি মুছে ফেলবেন?')) {
+        appDb.patients = (appDb.patients || []).filter(p => p.id !== pId);
+        saveDb();
+        renderPatientsTable();
+        calculateAnalytics();
+        toast('রেকর্ড মুছে ফেলা হয়েছে');
+      }
+    }
+
+    function clearPatientHistory() {
+      if (confirm('সকল রোগীর ডাটাবেজ ক্লিয়ার করতে চান?')) {
+        appDb.patients = [];
+        saveDb();
+        renderPatientsTable();
+        calculateAnalytics();
+        toast('ডাটাবেজ ক্লিয়ার হয়েছে');
+      }
+    }
+
+    function exportDataJSON() {
+      const backup = {
+        version: "10.0",
+        exportDate: new Date().toISOString(),
+        db: appDb,
+        logo: localStorage.getItem('rx_logo_asset') || null,
+        sig: localStorage.getItem('rx_sig_asset') || null
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Rx_Chamber_Backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast('ব্যাকআপ ফাইল ডাউনলোড হয়েছে');
+    }
+
+    function importDataJSON(e) {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!parsed.db) throw new Error("Invalid");
+          if (!confirm('বর্তমান সকল তথ্য বদলে ব্যাকআপ ফাইলের তথ্য লোড করবেন?')) return;
+          appDb = parsed.db;
+          appDb.sectionPresets = appDb.sectionPresets || {};
+          Object.keys(DEFAULT_SECTION_PRESETS).forEach(k => { if (!appDb.sectionPresets[k]) appDb.sectionPresets[k] = JSON.parse(JSON.stringify(DEFAULT_SECTION_PRESETS[k])); });
+          ['patients','templates','medicinesLibrary','chambers'].forEach(k => { if (!Array.isArray(appDb[k])) appDb[k] = []; });
+          if (!appDb.chambers.length) appDb.chambers = JSON.parse(JSON.stringify(DEFAULT_CHAMBERS));
+          if (!appDb.doctorLines) appDb.doctorLines = { bn: {}, en: {} };
+          saveDb(); applyTopNoteCfg();
+          if (parsed.logo) localStorage.setItem('rx_logo_asset', parsed.logo);
+          if (parsed.sig) localStorage.setItem('rx_sig_asset', parsed.sig);
+          applyDoctorProfileToDOM();
+          populateChamberSelectors();
+          renderLogoAndSignatureAssets();
+          populateTemplateDropdown();
+          renderPatientsTable();
+          calculateAnalytics();
+          toast('ডাটাবেজ সফলভাবে রিস্টোর হয়েছে');
+        } catch(err) {
+          alert('ফাইলটি সঠিক ব্যাকআপ ফাইল নয়!');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // REAL-TIME ANALYTICS
+    function calculateAnalytics() {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const startOfWeek = startOfDay - (now.getDay() * 86400000);
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+      let todayCount = 0, weekCount = 0, monthCount = 0, males = 0, females = 0, others = 0;
+      const diagMap = {};
+
+      (appDb.patients || []).forEach(p => {
+        const t = p.timestamp || Date.now();
+        if (t >= startOfDay) todayCount++;
+        if (t >= startOfWeek) weekCount++;
+        if (t >= startOfMonth) monthCount++;
+
+        const s = String(p.sex || '').toUpperCase();
+        if (s.includes('F') || s.includes('FEMALE') || s.includes('মহিলা')) females++;
+        else if (s.includes('OTHER') || s.includes('অন্য')) others++;
+        else males++;
+
+        if (p.diagnosis) {
+          p.diagnosis.split(',').forEach(d => {
+            const clean = d.trim();
+            if (clean && clean !== 'Clinical Check') {
+              diagMap[clean] = (diagMap[clean] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      document.getElementById('statTodayCount').innerText = `${toBn(todayCount)} জন`;
+      document.getElementById('statWeekCount').innerText = `${toBn(weekCount)} জন`;
+      document.getElementById('statMonthCount').innerText = `${toBn(monthCount)} জন`;
+      document.getElementById('statTotalCount').innerText = `${toBn(appDb.patients.length)} জন`;
+
+      const totalGender = males + females || 1;
+      document.getElementById('statMaleRatio').innerText = `${toBn(Math.round((males / totalGender) * 100))}%`;
+      document.getElementById('statFemaleRatio').innerText = `${toBn(Math.round((females / totalGender) * 100))}%`;
+
+      const topDiag = Object.entries(diagMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      const ul = document.getElementById('topDiseasesContainer');
+      if (ul) {
+        if (topDiag.length === 0) {
+          ul.innerHTML = `<li class="text-slate-400">এখনো কোনো রোগ নির্ণয়ের ডাটা নেই</li>`;
+        } else {
+          ul.innerHTML = topDiag.map(([d, cnt]) => `
+            <li class="flex justify-between items-center">
+              <span>${esc(d)}</span>
+              <span class="font-bold text-sky-800">${toBn(cnt)} জন</span>
+            </li>
+          `).join('');
+        }
+      }
+    }
+
+    // WHATSAPP PRESCRIPTION SUMMARY SHARING
+    function sendPrescriptionWhatsApp() {
+      const pName = document.getElementById('patientName').innerText.trim() || 'রোগী';
+      const rawPhone = toEn(document.getElementById('patientPhone').innerText.trim()).replace(/\D/g, '');
+      let phone = rawPhone;
+      if (phone.startsWith('880')) { /* ok */ }
+      else if (phone.startsWith('0')) phone = '88' + phone;
+      else if (phone.length === 10 && phone.startsWith('1')) phone = '880' + phone;
+      if (phone.length !== 13) { toast('সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন'); return; }
+
+      const pDate = document.getElementById('rxDate').innerText.trim();
+      const docName = (appDb.doctorLines && appDb.doctorLines.bn && appDb.doctorLines.bn.line2) ? appDb.doctorLines.bn.line2 : 'চিকিৎসক';
+
+      const medRows = Array.from(document.querySelectorAll('.med-row'));
+      let medText = "";
+      medRows.forEach((row, idx) => {
+        const edits = row.querySelectorAll('[contenteditable="true"]');
+        const brand = edits[0] ? edits[0].innerText.trim() : '';
+        const dose = edits[2] ? edits[2].innerText.trim() : '';
+        const dur = edits[3] ? edits[3].innerText.trim() : '';
+        if (brand) medText += `${toBn(idx + 1)}. ${brand} - ${dose} (${dur})\n`;
+      });
+
+      const adviceList = Array.from(document.querySelectorAll('#adviceList li span')).map(s => '• ' + s.innerText.trim()).join('\n');
+
+      const message = `*প্রেসক্রিপশন সারসংক্ষেপ*\nরোগীর নাম: ${pName}\nতারিখ: ${pDate}\nচিকিৎসক: ${docName}\n\n*ঔষধের তালিকা:*\n${medText || '—'}\n*পরামর্শ:*\n${adviceList || '—'}\n\nধন্যবাদ। সুস্থ থাকুন।`;
+      window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`, '_blank');
+    }
+
+    // AUTOCOMPLETE SUGGESTION ENGINE
+    const drop = document.getElementById('autocompleteDropdown');
+    let activeSuggestEl = null;
+
+    function showSuggest(e, category) {
+      const el = e.target;
+      activeSuggestEl = el;
+      const query = el.innerText.trim().toLowerCase();
+      if (!query || query.length < 1) {
+        drop.classList.add('hidden');
+        return;
+      }
+
+      let matches = [];
+      if (category === 'medicine') {
+        matches = appDb.medicinesLibrary.filter(m => (m.brand || '').toLowerCase().includes(query) || (m.generic || '').toLowerCase().includes(query));
+      } else if (appDb.sectionPresets && appDb.sectionPresets[category]) {
+        matches = appDb.sectionPresets[category].filter(i => i.toLowerCase().includes(query));
+      }
+
+      if (matches.length === 0) {
+        drop.classList.add('hidden');
+        return;
+      }
+
+      drop.innerHTML = '';
+      const rect = el.getBoundingClientRect();
+      drop.style.top = (window.scrollY + rect.bottom + 2) + 'px';
+      drop.style.left = (window.scrollX + rect.left) + 'px';
+      drop.style.width = Math.max(rect.width, 240) + 'px';
+
+      matches.slice(0, 6).forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'autocomplete-item';
+        if (category === 'medicine') {
+          div.innerHTML = `<span><strong>${esc(item.brand)}</strong> <small class="text-slate-400">${esc(item.generic)}</small></span><small class="text-sky-700">${esc(item.duration)}</small>`;
+          div.onclick = () => {
+            pushPrescriptionState();
+            const row = activeSuggestEl.closest('.med-row');
+            if (row) {
+              const edits = row.querySelectorAll('[contenteditable="true"]');
+              if (edits[0]) edits[0].innerText = item.brand;
+              if (edits[1]) edits[1].innerText = item.generic || '';
+              if (edits[2]) edits[2].innerText = item.dose || '';
+              if (edits[3]) edits[3].innerText = item.duration || '';
+            }
+            drop.classList.add('hidden');
+            saveAutoSnapshot();
+          };
+        } else {
+          div.innerText = item;
+          div.onclick = () => {
+            pushPrescriptionState();
+            activeSuggestEl.innerText = item;
+            drop.classList.add('hidden');
+            saveAutoSnapshot();
+          };
+        }
+        drop.appendChild(div);
+      });
+
+      drop.classList.remove('hidden');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (drop && !drop.contains(e.target) && e.target !== activeSuggestEl) {
+        drop.classList.add('hidden');
+      }
+    });
+
+    // VOICE DICTATION
+    let recognition = null;
+    let isVoiceActive = false;
+
+    function toggleVoiceDictation() {
+      const btn = document.getElementById('btnVoiceDictation');
+      const txt = document.getElementById('txtBtnVoice');
+
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('আপনার ব্রাউজারে ভয়েস টাইপিং সমর্থন করে না। গুগল ক্রোম বা এজ ব্যবহার করুন।');
+        return;
+      }
+
+      if (isVoiceActive) {
+        if (recognition) recognition.stop();
+        isVoiceActive = false;
+        btn.classList.remove('bg-amber-600', 'animate-pulse');
+        btn.classList.add('bg-rose-600');
+        txt.innerText = 'ভয়েস টাইপিং চালু করুন';
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'bn-BD';
+
+      recognition.onstart = () => {
+        isVoiceActive = true;
+        btn.classList.remove('bg-rose-600');
+        btn.classList.add('bg-amber-600', 'animate-pulse');
+        txt.innerText = 'শুনছি... (বন্ধ করুন)';
+      };
+
+      recognition.onresult = (ev) => {
+        const text = ev.results[ev.results.length - 1][0].transcript.trim();
+        if (activeInputTarget && activeInputTarget.isConnected) {
+          activeInputTarget.innerText += ' ' + text;
+        } else {
+          addCleanListItem('complaintsList');
+          const lastSpan = document.querySelector('#complaintsList li:last-child span');
+          if (lastSpan) lastSpan.innerText = text;
+        }
+        saveAutoSnapshot();
+      };
+
+      recognition.onerror = recognition.onend = () => {
+        isVoiceActive = false;
+        btn.classList.remove('bg-amber-600', 'animate-pulse');
+        btn.classList.add('bg-rose-600');
+        txt.innerText = 'ভয়েস টাইপিং চালু করুন';
+      };
+
+      recognition.start();
+    }
+
+    // DRAWER & NAVIGATION
+    function openToolsDrawer() { document.getElementById('toolsDrawer').classList.remove('hidden'); }
+    function closeToolsDrawer() { document.getElementById('toolsDrawer').classList.add('hidden'); }
+
+    function switchBottomTab(tabId, btn) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.nav-tab').forEach(b => {
+        b.classList.remove('text-sky-700', 'active', 'font-bold');
+        b.classList.add('text-slate-500');
+      });
+
+      const target = document.getElementById(tabId);
+      if (target) target.classList.remove('hidden');
+      if (btn) {
+        btn.classList.remove('text-slate-500');
+        btn.classList.add('text-sky-700', 'active', 'font-bold');
+      }
+
+      if (tabId === 'viewStorage') renderPatientsTable();
+      if (tabId === 'viewAnalytics') calculateAnalytics();
+    }
+
+    // ZERO-DEPENDENCY SELF-CONTAINED PWA
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt = null;
+      } else {
+        toast('ব্রাউজারের "Add to Home screen" বা "Install" অপশন ব্যবহার করুন');
+      }
+    }
+
+    function setupZeroDependencyPWA() {
+      if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+    }
+
+    // INITIALIZATION ON DOM READY
+    window.addEventListener('DOMContentLoaded', () => {
+      setupZeroDependencyPWA();
+      applyDoctorProfileToDOM();
+      populateChamberSelectors();
+      renderLogoAndSignatureAssets();
+      populateTemplateDropdown();
+
+      if (!restoreAutoSnapshot()) {
+        resetClinicalFields();
+        refreshDynamicElements();
+
+        // Default selected advice
+        const ulAdv = document.getElementById('adviceList');
+        ulAdv.innerHTML = '';
+        DEFAULT_SECTION_PRESETS.advice.filter(a => a.defaultChecked).forEach(a => {
+          const li = document.createElement('li');
+          li.className = "group";
+          li.innerHTML = `
+            <span contenteditable="true" onfocus="setActiveTarget(this)" onblur="saveAutoSnapshot()">${esc(a.text)}</span>
+            <button onclick="removeListItem(this)" class="no-print ml-1 text-rose-500 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+          `;
+          ulAdv.appendChild(li);
+        });
+      }
+
+      calculateBMI();
+      pushPrescriptionState();
+      renderPatientsTable();
+      calculateAnalytics();
+      applyTopNoteCfg();
+      window.addEventListener('resize', adjustColumnLayout);
+      setStatus('রেডি • ১ পেজ লকড');
+    });
+  </script>
+</body>
+</html>
